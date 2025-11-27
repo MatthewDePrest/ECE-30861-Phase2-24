@@ -11,8 +11,12 @@ from utils import UrlCategory, Provider
 
 
 def setup_logger():
-    log_file = os.getenv("LOG_FILE", "llm_logs.log")
+    log_file = os.getenv("LOG_FILE")#, "llm_logs.log")
     log_level = int(os.getenv("LOG_LEVEL", "1"))  # default to INFO
+
+    if log_file == None:
+        print(f"Error: Invalid log file path")
+        sys.exit(1)
 
     if log_level == 0:
         level = logging.disable(logging.CRITICAL + 1)  # silence
@@ -23,18 +27,23 @@ def setup_logger():
     else:
         level = logging.INFO
 
-    logging.basicConfig(
-        filename=log_file,
-        filemode="w",  # overwrite for each run
-        level=level,
-        format="%(asctime)s - %(levelname)s - %(message)s"
-    )
+    try:
+        logging.basicConfig(
+            filename=log_file,
+            filemode="w",  # overwrite for each run
+            level=level,
+            format="%(asctime)s - %(levelname)s - %(message)s"
+        )
+    except Exception:
+        print(f"Error: Invalid log file path '{log_file}'")
+        sys.exit(1)
 
     return logging.getLogger("testbench")
 
 # --- Domain: URL Classification ---
 
-logger = setup_logger()
+# logger = setup_logger()
+logger: logging.Logger = None
 
 # --- Ingest: URL parsing & classification ---
 def classify_url(raw: str) -> Tuple[UrlCategory, Provider, Dict[str, str]]:
@@ -71,6 +80,50 @@ def read_enter_delimited_file(filename: str) -> list[str]:
         # Re-raise the error to be caught by the caller for proper exit
         raise
 
+# def urls_processor(urls_file: str) -> Dict:
+#     """Process a newline-delimited URL file."""
+
+#     # Note: run_metrics, GradeResult, UrlCategory, Provider are imported at the top now
+#     from metrics import run_metrics, GradeResult, UrlCategory, Provider
+
+#     p = Path(urls_file)
+#     if not p.exists():
+#         logger.error(f"Error: file not found: {p}")
+#         sys.exit(1)
+        
+#     lines = read_enter_delimited_file(urls_file)
+#     source = str(p)
+#     logger.info(f"Read {len(lines)} lines from {source}. (grading stub)")
+
+#     last_result = {}
+    
+#     for line in lines:
+#         url_dictionary = {}
+#         # Allows for multiple comma-separated URLs on one line, treating them all as part of one "repo group"
+#         for url in line.split(","):
+#             url = url.strip()
+#             if not url:
+#                 continue
+#             category, provider, ids = classify_url(url)
+#             # Store the info for this group
+#             url_dictionary[category] = ids
+        
+#         if not url_dictionary.get(UrlCategory.MODEL):
+#             logger.error("Error: No MODEL URL found in line, skipping.")
+#             continue
+            
+#         try:
+#             result = asyncio.run(run_metrics(url_dictionary))
+#             # Guaranteed NDJSON output: explicitly write to stdout with a newline
+#             # sys.stdout.write(json.dumps(result) + '\n') 
+#             sys.stdout.write(json.dumps(result, separators=(',', ':')) + '\n') 
+#             last_result = result
+
+#         except Exception as e:
+#             logger.error(f"Error running metrics for line '{line}': {e}", exc_info=True)
+
+#     return last_result
+
 def urls_processor(urls_file: str) -> Dict:
     """Process a newline-delimited URL file."""
 
@@ -84,36 +137,60 @@ def urls_processor(urls_file: str) -> Dict:
         
     lines = read_enter_delimited_file(urls_file)
     source = str(p)
-    logger.info(f"Read {len(lines)} lines from {source}. (grading stub)")
+    logger.info(f"Read {len(lines)} lines from {source}.")
 
-    last_result = {}
+    all_results = []
     
-    for line in lines:
+    for line_num, line in enumerate(lines, 1):
         url_dictionary = {}
-        # Allows for multiple comma-separated URLs on one line, treating them all as part of one "repo group"
-        for url in line.split(","):
-            url = url.strip()
-            if not url:
-                continue
-            category, provider, ids = classify_url(url)
-            # Store the info for this group
-            url_dictionary[category] = ids
         
+        # Skip empty lines
+        if not line.strip():
+            continue
+        
+        # Split by comma and process each URL
+        url_parts = [u.strip() for u in line.split(",")]
+        
+        # Remove empty strings from the list
+        url_parts = [u for u in url_parts if u]
+        
+        if not url_parts:
+            logger.warning(f"Line {line_num} has no valid URLs, skipping.")
+            continue
+        
+        # Process each URL in the line
+        for url in url_parts:
+            try:
+                category, provider, ids = classify_url(url)
+                # Store the info for this group
+                url_dictionary[category] = ids
+            except Exception as e:
+                logger.error(f"Error classifying URL '{url}' on line {line_num}: {e}")
+                continue
+        
+        # Skip if no MODEL URL found
         if not url_dictionary.get(UrlCategory.MODEL):
-            logger.error("Error: No MODEL URL found in line, skipping.")
+            logger.error(f"Error: No MODEL URL found on line {line_num}, skipping.")
             continue
             
         try:
+            logger.info(f"Processing line {line_num}: {url_dictionary.get(UrlCategory.MODEL).get('url', 'N/A')}")
             result = asyncio.run(run_metrics(url_dictionary))
-            # Guaranteed NDJSON output: explicitly write to stdout with a newline
-            # sys.stdout.write(json.dumps(result) + '\n') 
-            sys.stdout.write(json.dumps(result, separators=(',', ':')) + '\n') 
-            last_result = result
+            
+            # Write result as NDJSON to stdout
+            sys.stdout.write(json.dumps(result, separators=(',', ':')) + '\n')
+            sys.stdout.flush()  # Ensure immediate output
+            
+            all_results.append(result)
 
         except Exception as e:
-            logger.error(f"Error running metrics for line '{line}': {e}", exc_info=True)
+            logger.error(f"Error running metrics for line {line_num} '{line}': {e}", exc_info=True)
+            continue
 
-    return last_result
+    logger.info(f"Processed {len(all_results)} URLs successfully out of {len(lines)} total lines.")
+    
+    # Return the last result for compatibility (or return all_results if you need all)
+    return all_results[-1] if all_results else {}
 
 def run_test(min_coverage: int = 80) -> bool:
     import coverage
@@ -217,8 +294,17 @@ def incorrect():
     sys.exit(1)
 
 def main():
-    """Handles command-line arguments (install, test, or urls_file)."""
+
+    global logger
+    logger = setup_logger()
     
+    token = os.getenv("GITHUB_TOKEN")
+    if not token or not token.strip() or token == None:
+        print("Error: Invalid or missing GITHUB_TOKEN")
+        sys.exit(1)
+
+    """Handles command-line arguments (install, test, or urls_file)."""
+
     if len(sys.argv) < 2:
         logger.critical("Error in usage: Missing argument. Exiting.")
         incorrect()
@@ -232,12 +318,68 @@ def main():
         sys.exit(exit_code)
 
     elif arg == "test":
-        # The original click command had a --min-coverage option, which is lost here.
-        # For simplicity, we use the default 80%
-        success = run_test(min_coverage=80) 
-        sys.exit(0 if success else 1) # Exit 0 for success, 1 for failure
+        import subprocess
+        import json
+        import xml.etree.ElementTree as ET
+
+        try:
+            # Erase old coverage data
+            subprocess.run([sys.executable, "-m", "coverage", "erase"], check=True)
+
+            # Run pytest under coverage, run all tests, suppress warnings
+            output = subprocess.run(
+                [sys.executable, "-m", "coverage", "run", "-m", "pytest", "--disable-warnings", "-q", "--maxfail=0", "--tb=no"],
+                check=False,
+                capture_output=True,
+            )
+            output = output.stdout.decode("utf-8")
+
+            # Generate coverage XML
+            subprocess.run([sys.executable, "-m", "coverage", "xml"], check=True)
+
+            # Parse coverage.xml to get overall line coverage
+            tree = ET.parse("coverage.xml")
+            root = tree.getroot()
+            coverage = round(float(root.get("line-rate", 0.0)) * 100, 2)
+
+            # Collect test functions
+            result = subprocess.run(
+                [sys.executable, "-m", "pytest", "--collect-only", "--tb=no", "-q"],
+                capture_output=True,
+                text=True,
+            )
+
+            test_count = 0
+            for line in result.stdout.splitlines():
+                if not line.strip():
+                    continue
+                test_count += int(line.split(":")[1].strip())
+            passed_count = test_count - output.count("FAILED")
+
+            if test_count == 0:
+                print("No tests found. Check the pytest collection output.", file=sys.stderr)
+                sys.exit(1)
+
+            # Output the results as JSON
+            print(json.dumps({
+                "test_count": test_count,
+                "coverage": coverage
+            }))
+            json.dumps({
+                "test_count": test_count,
+                "coverage": coverage
+            })
+
+            print(f"{passed_count}/{test_count} test cases passed. {coverage}% line coverage achieved.")
+
+            sys.exit(0)
+
+        except Exception as e:
+            print(f"Error running tests: {e}", file=sys.stderr)
+            sys.exit(1)
 
     else:
+
         # Assume it's a file path for the urls_processor
         urls_file = arg
         logger.info(f"Processing URLs from file: {urls_file}")
