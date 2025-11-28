@@ -1,0 +1,10 @@
+2025-11-28 02:01:25,328 - INFO - Processing URLs from file: many_urls.txt
+2025-11-28 02:01:25,704 - INFO - Read 3 lines from many_urls.txt.
+2025-11-28 02:01:25,704 - INFO - Processing line 1: https://huggingface.co/google-bert/bert-base-uncased
+2025-11-28 02:01:25,831 - INFO - Cloning https://github.com/google-research/bert into C:\Users\hitae\AppData\Local\Temp\code_quality_lmemg606\repo
+2025-11-28 02:01:33,483 - INFO - Processing line 2: https://huggingface.co/parvk11/audience_classifier_model
+2025-11-28 02:01:33,483 - WARNING - No valid code_url provided, defaulting code_quality=0.0
+2025-11-28 02:01:36,013 - INFO - Processing line 3: https://huggingface.co/openai/whisper-tiny/tree/main
+2025-11-28 02:01:36,013 - WARNING - No valid code_url provided, defaulting code_quality=0.0
+2025-11-28 02:01:38,258 - ERROR - Error in metric ramp_up_time:"No 'downloads' field found for model: openai/whisper-tiny/tree/main"
+2025-11-28 02:01:38,258 - INFO - Processed 3 URLs successfully out of 3 total lines.
