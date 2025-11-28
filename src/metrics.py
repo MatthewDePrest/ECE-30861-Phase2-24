@@ -114,6 +114,7 @@ async def run_metrics(urls: Dict[UrlCategory, str]) -> GradeResult:
     net_en = 1  # enabled
     if net_en:
         net_score_input = {}
+        metric_scores["dataset_and_code_score"] = (metric_scores.get("dataset_quality", 0.0) + metric_scores.get("code_quality", 0.0)) / 2
         for k, v in metric_scores.items():
             # Only include keys that are intended to be numeric *scores*
             if not k.endswith("_latency") and k not in ["name", "category", "size_score"]:
@@ -149,7 +150,7 @@ async def run_metrics(urls: Dict[UrlCategory, str]) -> GradeResult:
     final_ordered_scores["size_score"] = metric_scores.get("size_score")
     final_ordered_scores["size_score_latency"] = metric_scores.get("size_score_latency")
     
-    final_ordered_scores["dataset_and_code_score"] = (metric_scores.get("dataset_quality") + metric_scores.get("code_quality")) / 2
+    final_ordered_scores["dataset_and_code_score"] = metric_scores.get("dataset_and_code_score")
     final_ordered_scores["dataset_and_code_score_latency"] = metric_scores.get("dataset_and_code_score_latency")
     final_ordered_scores["dataset_quality"] = metric_scores.get("dataset_quality")
     final_ordered_scores["dataset_quality_latency"] = metric_scores.get("dataset_quality_latency")
