@@ -32,8 +32,8 @@ router = APIRouter(tags=["Artifacts"])
 # In-memory storage for development (replace with DynamoDB later)
 ARTIFACT_STORE: Dict[str, Dict] = {}
 
-USE_LOCAL = False
-USE_AWS = True
+USE_LOCAL = True
+USE_AWS = False
 
 # Store for tokens (in-memory for simplicity)
 ACTIVE_TOKENS: Dict[str, Dict] = {}
@@ -273,7 +273,7 @@ async def create_artifact(
 
 @router.get(
     "/artifact/{artifact_type}/{id}",
-    response_model=ArtifactReturn,
+    response_model=Artifact,
     summary="Retrieve an artifact (BASELINE - Read)"
 )
 async def get_artifact(
@@ -303,14 +303,15 @@ async def get_artifact(
     
     download_url = generate_download_url(artifact['id'], artifact['name'])
     
-    return ArtifactReturn(
+    return Artifact(
         metadata=ArtifactMetadata(
             name=artifact['name'],
             id=artifact['id'],
             type=ArtifactType(artifact['type'])
         ),
-        data=ArtifactReturnURL(
-            url=artifact['url']
+        data=ArtifactData(
+            url=artifact['url'],
+            download_url=download_url
         )
     )
 
