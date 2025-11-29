@@ -34,6 +34,16 @@ ARTIFACT_STORE: Dict[str, Dict] = {}
 USE_LOCAL = False
 USE_AWS = True
 
+# Store for tokens (in-memory for simplicity)
+ACTIVE_TOKENS: Dict[str, Dict] = {}
+
+# Default user credentials
+DEFAULT_USER = {
+    "name": "ece30861defaultadminuser",
+    "password": "correcthorsebatterystaple123(!__+@**(A'\"`;DROP TABLE packages;",
+    "is_admin": True
+}
+
 # HELPERS
 def generate_artifact_id() -> str:
     """Generate a unique artifact ID matching the spec format."""
@@ -153,10 +163,60 @@ def generate_download_url(artifact_id: str, artifact_name: str) -> str:
     base_url = os.getenv('BASE_URL', 'http://52.23.239.59:8000')
     return f"{base_url}/download/{artifact_id}/{artifact_name}"
 
+def validate_token(token: Optional[str]) -> bool:
+    """Validate authentication token. Returns True if valid or if auth not required."""
+    if not token:
+        return True  # Allow if no token provided (for now)
+    
+    # Check if token exists and is valid
+    return token in ACTIVE_TOKENS
+
 # ============================================================================
 # BASELINE ENDPOINTS
 # ============================================================================
+@router.put("/authenticate")
+async def authenticate():
+    """Return 501 if authentication is not implemented."""
+    raise HTTPException(
+        status_code=501,
+        detail="This system does not support authentication"
+    )
 
+# @router.put("/authenticate")
+# async def authenticate(auth_request: dict):
+#     """Authenticate user and return token."""
+#     try:
+#         user = auth_request.get("user", {})
+#         secret = auth_request.get("secret", {})
+        
+#         username = user.get("name")
+#         password = secret.get("password")
+        
+#         # Validate credentials
+#         if username == DEFAULT_USER["name"] and password == DEFAULT_USER["password"]:
+#             # Generate simple token
+#             token = f"bearer {generate_artifact_id()}"  # Reuse your ID generator
+            
+#             # Store token
+#             ACTIVE_TOKENS[token] = {
+#                 "user": username,
+#                 "is_admin": user.get("is_admin", True),
+#                 "created_at": datetime.utcnow().isoformat()
+#             }
+            
+#             return token
+#         else:
+#             raise HTTPException(
+#                 status_code=401,
+#                 detail="The user or password is invalid"
+#             )
+            
+#     except Exception as e:
+#         raise HTTPException(
+#             status_code=400,
+#             detail="There is missing field(s) in the AuthenticationRequest or it is formed improperly"
+#         )
+    
 @router.post(
     "/artifact/{artifact_type}",
     response_model=Artifact,
