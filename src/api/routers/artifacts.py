@@ -3,6 +3,7 @@ import uuid
 import asyncio
 import tempfile
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Dict, Any
@@ -143,6 +144,15 @@ def encode_offset(key: Optional[Dict[str, Any]]) -> Optional[str]:
         return None
     return json.dumps(key)
 
+def generate_download_url(artifact_id: str, artifact_name: str) -> str:
+    """
+    Generate a download URL for the artifact.
+    In production, this should point to your actual file storage endpoint.
+    """
+    # Get the base URL from environment or use current server
+    base_url = os.getenv('BASE_URL', 'http://52.23.239.59:8000')
+    return f"{base_url}/download/{artifact_id}/{artifact_name}"
+
 # ============================================================================
 # BASELINE ENDPOINTS
 # ============================================================================
@@ -218,6 +228,8 @@ async def create_artifact(
     # aws implementation
     if (USE_AWS):
         await db_service.create_artifact(artifact_record)
+
+    download_url = generate_download_url(artifact_id, artifact_name)
     
     # Return artifact
     return Artifact(
@@ -226,7 +238,10 @@ async def create_artifact(
             id=artifact_id,
             type=artifact_type
         ),
-        data=ArtifactData(url=artifact_data.url)
+        data=ArtifactData(
+            url=artifact_data.url,
+            download_url=download_url
+        )
     )
 
 
@@ -260,13 +275,18 @@ async def get_artifact(
             detail="Artifact type mismatch"
         )
     
+    download_url = generate_download_url(artifact['id'], artifact['name'])
+    
     return Artifact(
         metadata=ArtifactMetadata(
             name=artifact['name'],
             id=artifact['id'],
             type=ArtifactType(artifact['type'])
         ),
-        data=ArtifactData(url=artifact['url'])
+        data=ArtifactData(
+            url=artifact['url'],
+            download_url=download_url
+        )
     )
 
 
