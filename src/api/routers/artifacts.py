@@ -273,7 +273,7 @@ async def create_artifact(
 
 @router.get(
     "/artifacts/{artifact_type}/{id}",
-    response_model=Artifact,
+    response_model=ArtifactReturn,
     summary="Retrieve an artifact (BASELINE - Read)"
 )
 async def get_artifact(
@@ -303,15 +303,15 @@ async def get_artifact(
     
     download_url = generate_download_url(artifact['id'], artifact['name'])
     
-    return Artifact(
+    return ArtifactReturn(
         metadata=ArtifactMetadata(
             name=artifact['name'],
             id=artifact['id'],
             type=ArtifactType(artifact['type'])
         ),
-        data=ArtifactData(
-            url=artifact['url'],
-            download_url=download_url
+        data=ArtifactReturnURL(
+            url=artifact['url']
+            # download_url=download_url
         )
     )
 
