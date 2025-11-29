@@ -272,7 +272,7 @@ async def create_artifact(
 
 
 @router.get(
-    "/artifact/{artifact_type}/{id}",
+    "/artifacts/{artifact_type}/{id}",
     response_model=Artifact,
     summary="Retrieve an artifact (BASELINE - Read)"
 )
