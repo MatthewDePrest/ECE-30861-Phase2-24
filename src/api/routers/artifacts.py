@@ -350,8 +350,8 @@ async def get_artifact(
             type=ArtifactType(artifact['type'])
         ),
         data=ArtifactData(
-            url=artifact['url'],
-            download_url=download_url
+            url=artifact['url']
+            # download_url=download_url
         )
     )
 
