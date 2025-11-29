@@ -174,48 +174,48 @@ def validate_token(token: Optional[str]) -> bool:
 # ============================================================================
 # BASELINE ENDPOINTS
 # ============================================================================
-@router.put("/authenticate")
-async def authenticate():
-    """Return 501 if authentication is not implemented."""
-    raise HTTPException(
-        status_code=501,
-        detail="This system does not support authentication"
-    )
-
 # @router.put("/authenticate")
-# async def authenticate(auth_request: dict):
-#     """Authenticate user and return token."""
-#     try:
-#         user = auth_request.get("user", {})
-#         secret = auth_request.get("secret", {})
+# async def authenticate():
+#     """Return 501 if authentication is not implemented."""
+#     raise HTTPException(
+#         status_code=501,
+#         detail="This system does not support authentication"
+#     )
+
+@router.put("/authenticate")
+async def authenticate(auth_request: dict):
+    """Authenticate user and return token."""
+    try:
+        user = auth_request.get("user", {})
+        secret = auth_request.get("secret", {})
         
-#         username = user.get("name")
-#         password = secret.get("password")
+        username = user.get("name")
+        password = secret.get("password")
         
-#         # Validate credentials
-#         if username == DEFAULT_USER["name"] and password == DEFAULT_USER["password"]:
-#             # Generate simple token
-#             token = f"bearer {generate_artifact_id()}"  # Reuse your ID generator
+        # Validate credentials
+        if username == DEFAULT_USER["name"] and password == DEFAULT_USER["password"]:
+            # Generate simple token
+            token = f"bearer {generate_artifact_id()}"  # Reuse your ID generator
             
-#             # Store token
-#             ACTIVE_TOKENS[token] = {
-#                 "user": username,
-#                 "is_admin": user.get("is_admin", True),
-#                 "created_at": datetime.utcnow().isoformat()
-#             }
+            # Store token
+            ACTIVE_TOKENS[token] = {
+                "user": username,
+                "is_admin": user.get("is_admin", True),
+                "created_at": datetime.utcnow().isoformat()
+            }
             
-#             return token
-#         else:
-#             raise HTTPException(
-#                 status_code=401,
-#                 detail="The user or password is invalid"
-#             )
+            return token
+        else:
+            raise HTTPException(
+                status_code=401,
+                detail="The user or password is invalid"
+            )
             
-#     except Exception as e:
-#         raise HTTPException(
-#             status_code=400,
-#             detail="There is missing field(s) in the AuthenticationRequest or it is formed improperly"
-#         )
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail="There is missing field(s) in the AuthenticationRequest or it is formed improperly"
+        )
     
 @router.post(
     "/artifact/{artifact_type}",
@@ -316,6 +316,12 @@ async def get_artifact(
     x_authorization: Optional[str] = Header(None)
 ):
     """Return this artifact."""
+
+    if x_authorization and not validate_token(x_authorization):
+        raise HTTPException(
+            status_code=403,
+            detail="Authentication failed due to invalid or missing AuthenticationToken"
+        )
 
     # local implementation
     if (USE_LOCAL):
