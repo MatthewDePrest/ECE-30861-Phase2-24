@@ -14,7 +14,8 @@ from pydantic import HttpUrl
 
 from api.models.artifact import (
     Artifact, ArtifactData, ArtifactType, ModelRating, 
-    ArtifactMetadata, ArtifactQuery, EnumerateOffset
+    ArtifactMetadata, ArtifactQuery, EnumerateOffset,
+    ArtifactReturn, ArtifactReturnURL
 )
 
 # Import your metrics computation
@@ -343,15 +344,14 @@ async def get_artifact(
     
     download_url = generate_download_url(artifact['id'], artifact['name'])
     
-    return Artifact(
+    return ArtifactReturn(
         metadata=ArtifactMetadata(
             name=artifact['name'],
             id=artifact['id'],
             type=ArtifactType(artifact['type'])
         ),
-        data=ArtifactData(
+        data=ArtifactReturnURL(
             url=artifact['url']
-            # download_url=download_url
         )
     )
 

@@ -17,6 +17,9 @@ class ArtifactData(BaseModel):
     url: HttpUrl = Field(..., description="Artifact source url used during ingest.")
     download_url: Optional[HttpUrl] = Field(None, description="Direct download link served by your server")
 
+class ArtifactReturnURL(BaseModel):
+    url: HttpUrl = Field(..., description="Artifact source url used during ingest.")
+
 class ArtifactMetadata(BaseModel):
     """Metadata for an artifact."""
     name: str = Field(..., description="Name of the artifact")
@@ -27,6 +30,11 @@ class Artifact(BaseModel):
     """Complete artifact envelope."""
     metadata: ArtifactMetadata
     data: ArtifactData
+
+class ArtifactReturn(BaseModel):
+    """Complete artifact return envelope."""
+    metadata: ArtifactMetadata
+    data: ArtifactReturnURL
 
 class ArtifactQuery(BaseModel):
     """Query structure for searching artifacts."""
