@@ -412,7 +412,8 @@ async def list_artifacts_endpoint(
     q = queries[0]
 
     name_filter = q.name if q.name else None
-    type_filter = q.types if q.types else None
+    # type_filter = q.types if q.types else None
+    type_filter = [t.value for t in q.types] if q.types else None
 
     # Handle pagination offset for AWS
     last_key = None
