@@ -137,8 +137,8 @@ def check_metrics_threshold(rating: ModelRating) -> bool:
     for metric in non_latency_metrics:
         if metric < 0.5 and metric != -1.0:  # -1.0 is allowed for missing metrics
             # pass for local testing. return false when deploying
-            # return False
-            pass
+            return False
+            # pass
     
     return True
 
@@ -273,7 +273,7 @@ async def create_artifact(
 
 @router.get(
     "/artifacts/{artifact_type}/{id}",
-    response_model=ArtifactReturn,
+    response_model=Artifact,
     summary="Retrieve an artifact (BASELINE - Read)"
 )
 async def get_artifact(
@@ -303,15 +303,15 @@ async def get_artifact(
     
     download_url = generate_download_url(artifact['id'], artifact['name'])
     
-    return ArtifactReturn(
+    return Artifact(
         metadata=ArtifactMetadata(
             name=artifact['name'],
             id=artifact['id'],
             type=ArtifactType(artifact['type'])
         ),
-        data=ArtifactReturnURL(
-            url=artifact['url']
-            # download_url=download_url
+        data=ArtifactData(
+            url=artifact['url'],
+            download_url=download_url
         )
     )
 
