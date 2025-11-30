@@ -95,7 +95,7 @@ def extract_lineage_with_llm(model_id: str) -> list:
     except Exception as e:
         return []
 
-def lineage_graph_with_llm(model_url_or_id: str) -> list:
+def get_lineage_graph(model_url_or_id: str) -> list:
     """Return the model lineage from root → current model using LLM, as URLs."""
     # Extract model ID
     if model_url_or_id.startswith("https://huggingface.co/"):
@@ -131,11 +131,11 @@ if __name__ == "__main__":
     warnings.filterwarnings("ignore", category=UserWarning, module="huggingface_hub")
 
     # Get the lineage for a model and print only the lineage output as URLs
-    lineage = lineage_graph_with_llm("https://huggingface.co/google-bert/bert-base-uncased")
+    lineage = get_lineage_graph("https://huggingface.co/google-bert/bert-base-uncased")
     print("Lineage:", " → ".join(lineage))
 
-    lineage = lineage_graph_with_llm("https://huggingface.co/textattack/bert-base-uncased-imdb")
+    lineage = get_lineage_graph("https://huggingface.co/textattack/bert-base-uncased-imdb")
     print("Lineage:", " → ".join(lineage))
 
-    lineage = lineage_graph_with_llm("https://huggingface.co/justinlamlamlam/open_orca_chat")
+    lineage = get_lineage_graph("https://huggingface.co/justinlamlamlam/open_orca_chat")
     print("Lineage:", " → ".join(lineage))

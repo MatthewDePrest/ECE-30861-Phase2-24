@@ -103,3 +103,26 @@ async def test_exception_path(monkeypatch):
     monkeypatch.setattr("src.ramp_up_time._fetch_readme_text", boom)
     score, latency_ms = await compute("https://huggingface.co/org/model", None, None)
     assert score == ERROR_VALUE and latency_ms >= 0
+
+@pytest.mark.asyncio
+async def test_reasonable_scores():
+    code_url = "https://github.com/google-research/bert"
+    dataset_url = "https://huggingface.co/datasets/bookcorpus/bookcorpus"
+    model_url = "https://huggingface.co/google-bert/bert-base-uncased"
+    s1, l1 = await compute(model_url, code_url, dataset_url)
+
+    code_url = "https://github.com/huggingface/transformers"  
+    dataset_url = "https://huggingface.co/datasets/none"  
+    model_url = "https://huggingface.co/roberta-base"
+    s2, l2 = await compute(model_url, code_url, dataset_url)
+
+    code_url    = "https://huggingface.co/chiedo/hello-world"  
+    dataset_url = "https://huggingface.co/datasets/chiedo/hello-world"  
+    model_url   = "https://huggingface.co/chiedo/hello-world"
+    s3, l3 = await compute(model_url, code_url, dataset_url)
+
+    assert s1 > 0.5
+    assert s2 > 0.5
+    assert s1 > s2
+    assert s3 < 0.4
+    assert (l1 > 0) and (l2 > 0) and (l3 > 0)

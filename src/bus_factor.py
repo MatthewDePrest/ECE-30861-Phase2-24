@@ -81,35 +81,35 @@ async def compute(model_url: str, code_url: Optional[str], dataset_url: Optional
 
 
 # Example use:
-if __name__ == "__main__":
-    print("TEST 1")
-    code_url = "https://github.com/google-research/bert"
-    dataset_url = "https://huggingface.co/datasets/bookcorpus/bookcorpus"
-    model_url = "https://huggingface.co/google-bert/bert-base-uncased"
-    score, latency = asyncio.run(compute(model_url, code_url, dataset_url))
-    print(f"Reviewedness score: {score}")
-    print(f"Computation time: {latency:.2f} seconds")
+# if __name__ == "__main__":
+#     print("TEST 1")
+#     code_url = "https://github.com/google-research/bert"
+#     dataset_url = "https://huggingface.co/datasets/bookcorpus/bookcorpus"
+#     model_url = "https://huggingface.co/google-bert/bert-base-uncased"
+#     score, latency = asyncio.run(compute(model_url, code_url, dataset_url))
+#     print(f"Reviewedness score: {score}")
+#     print(f"Computation time: {latency:.2f} ms")
 
-    print("\nTEST 2")
-    code_url    = "https://huggingface.co/chiedo/hello-world"  
-    dataset_url = "https://huggingface.co/datasets/chiedo/hello-world"  
-    model_url   = "https://huggingface.co/chiedo/hello-world"
-    score, latency = asyncio.run(compute(model_url, code_url, dataset_url))
-    print(f"Reviewedness score: {score}")
-    print(f"Computation time: {latency:.2f} seconds")
+#     print("\nTEST 2")
+#     code_url    = "https://huggingface.co/chiedo/hello-world"  
+#     dataset_url = "https://huggingface.co/datasets/chiedo/hello-world"  
+#     model_url   = "https://huggingface.co/chiedo/hello-world"
+#     score, latency = asyncio.run(compute(model_url, code_url, dataset_url))
+#     print(f"Reviewedness score: {score}")
+#     print(f"Computation time: {latency:.2f} ms")
 
-    print("\nTEST 3")
-    code_url = "https://github.com/huggingface/transformers"  
-    dataset_url = "https://huggingface.co/datasets/none"  
-    model_url = "https://huggingface.co/FacebookAI/roberta-base"
-    score, latency = asyncio.run(compute(model_url, code_url, dataset_url))
-    print(f"Reviewedness score: {score}")
-    print(f"Computation time: {latency:.2f} seconds")
+#     print("\nTEST 3")
+#     code_url = "https://github.com/huggingface/transformers"  
+#     dataset_url = "https://huggingface.co/datasets/none"  
+#     model_url = "https://huggingface.co/FacebookAI/roberta-base"
+#     score, latency = asyncio.run(compute(model_url, code_url, dataset_url))
+#     print(f"Reviewedness score: {score}")
+#     print(f"Computation time: {latency:.2f} ms")
 
-    print("\nTEST 4 (Invalid Model URL)")
-    code_url = "https://github.com/huggingface/transformers"  
-    dataset_url = "https://huggingface.co/datasets/none"  
-    model_url = "https://huggingface.co/roberta-base"
-    score, latency = asyncio.run(compute(model_url, code_url, dataset_url))
-    print(f"Reviewedness score: {score}")
-    print(f"Computation time: {latency:.2f} seconds")
+#     print("\nTEST 4 (Invalid Model URL)")
+#     code_url = "https://github.com/huggingface/transformers"  
+#     dataset_url = "https://huggingface.co/datasets/none"  
+#     model_url = "https://huggingface.co/roberta-base"
+#     score, latency = asyncio.run(compute(model_url, code_url, dataset_url))
+#     print(f"Reviewedness score: {score}")
+#     print(f"Computation time: {latency:.2f} ms")

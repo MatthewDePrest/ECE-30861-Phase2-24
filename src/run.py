@@ -11,7 +11,7 @@ from utils import UrlCategory, Provider
 
 
 def setup_logger():
-    log_file = os.getenv("LOG_FILE")#, "llm_logs.log")
+    log_file = os.getenv("LOG_FILE", "llm_logs.log")
     log_level = int(os.getenv("LOG_LEVEL", "1"))  # default to INFO
 
     if log_file == None:
@@ -298,10 +298,10 @@ def main():
     global logger
     logger = setup_logger()
     
-    token = os.getenv("GITHUB_TOKEN")
-    if not token or not token.strip() or token == None:
-        print("Error: Invalid or missing GITHUB_TOKEN")
-        sys.exit(1)
+    # token = os.getenv("GITHUB_TOKEN")
+    # if not token or not token.strip() or token == None:
+    #     print("Error: Invalid or missing GITHUB_TOKEN")
+    #     sys.exit(1)
 
     """Handles command-line arguments (install, test, or urls_file)."""
 
@@ -361,10 +361,10 @@ def main():
                 sys.exit(1)
 
             # Output the results as JSON
-            print(json.dumps({
-                "test_count": test_count,
-                "coverage": coverage
-            }))
+            # print(json.dumps({
+            #     "test_count": test_count,
+            #     "coverage": coverage
+            # }))
             json.dumps({
                 "test_count": test_count,
                 "coverage": coverage

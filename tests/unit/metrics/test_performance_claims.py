@@ -1,4 +1,6 @@
 # tests/unit/metrics/test_performance_claims.py
+import asyncio
+from src.performance_claims import compute
 import sys
 import types
 import re
@@ -152,3 +154,27 @@ async def test_clone_exception_logs_and_returns_zero(monkeypatch, patch_tmpdir, 
     assert score == 0.0 and isinstance(ms, int) and ms >= 0
     assert any("Error analyzing performance_claims" in rec.message for rec in caplog.records)
     assert rm_calls["args"] == (str(tmp_root),)
+
+def test_reasonable_scores():
+    code_url = "https://github.com/google-research/bert"
+    dataset_url = "https://huggingface.co/datasets/bookcorpus/bookcorpus"
+    model_url = "https://huggingface.co/google-bert/bert-base-uncased"
+    s1, l1 = asyncio.run(compute(model_url, code_url, dataset_url))
+    
+    code_url = "https://github.com/huggingface/transformers"  
+    dataset_url = "https://huggingface.co/datasets/none"  
+    model_url = "https://huggingface.co/roberta-base"
+    s2, l2 = asyncio.run(compute(model_url, code_url, dataset_url))
+    
+    code_url    = "https://huggingface.co/chiedo/hello-world"  
+    dataset_url = "https://huggingface.co/datasets/chiedo/hello-world"  
+    model_url   = "https://huggingface.co/chiedo/hello-world"
+    s3, l3 = asyncio.run(compute(model_url, code_url, dataset_url))
+
+    assert s1 > 0.8
+    assert s2 > 0.8
+    assert s3 > 0.5
+    assert l1 > 0
+    assert l2 > 0
+    assert l3 > 0
+    

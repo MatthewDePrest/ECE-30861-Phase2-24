@@ -15,7 +15,7 @@ def compute_reproducibility(model_url: str):
     # Check if it's a Hugging Face model URL
     match = re.match(r"https?://huggingface\.co/([^/]+/[^/]+)", model_url)
     if not match:
-        return 0.0, time.time() - start_time
+        return 0.0, (time.time() - start_time) * 1000
 
     model_id = match.group(1)
 
@@ -61,34 +61,34 @@ def compute_reproducibility(model_url: str):
         print(f"Error: {e}")
         score = 0.0
 
-    latency = time.time() - start_time
-    return score, latency
+    latency_ms = (time.time() - start_time) * 1000
+    return score, latency_ms
 
 # ------------------ Test run ------------------
-if __name__ == "__main__":
-    print("TEST 1")
-    code_url = "https://github.com/google-research/bert"
-    dataset_url = "https://huggingface.co/datasets/bookcorpus/bookcorpus"
-    model_url = "https://huggingface.co/google-bert/bert-base-uncased"
+# if __name__ == "__main__":
+    # print("TEST 1")
+    # code_url = "https://github.com/google-research/bert"
+    # dataset_url = "https://huggingface.co/datasets/bookcorpus/bookcorpus"
+    # model_url = "https://huggingface.co/google-bert/bert-base-uncased"
 
-    score, latency = compute_reproducibility(model_url)
-    print(f"Reproducibility score: {score}")
-    print(f"Computation time: {latency:.2f} seconds")
+    # score, latency = compute_reproducibility(model_url)
+    # print(f"Reproducibility score: {score}")
+    # print(f"Computation time: {latency:.2f} ms")
 
-    print("\nTEST 2")
-    code_url    = "https://huggingface.co/chiedo/hello-world"  
-    dataset_url = "https://huggingface.co/datasets/chiedo/hello-world"  
-    model_url   = "https://huggingface.co/chiedo/hello-world"
+    # print("\nTEST 2")
+    # code_url    = "https://huggingface.co/chiedo/hello-world"  
+    # dataset_url = "https://huggingface.co/datasets/chiedo/hello-world"  
+    # model_url   = "https://huggingface.co/chiedo/hello-world"
 
-    score, latency = compute_reproducibility(model_url)
-    print(f"Reproducibility score: {score}")
-    print(f"Computation time: {latency:.2f} seconds")
+    # score, latency = compute_reproducibility(model_url)
+    # print(f"Reproducibility score: {score}")
+    # print(f"Computation time: {latency:.2f} ms")
 
-    print("\nTEST 3")
-    code_url = "https://github.com/huggingface/transformers"  
-    dataset_url = "https://huggingface.co/datasets/none"  
-    model_url = "https://huggingface.co/roberta-base"
+    # print("\nTEST 3")
+    # code_url = "https://github.com/huggingface/transformers"  
+    # dataset_url = "https://huggingface.co/datasets/none"  
+    # model_url = "https://huggingface.co/roberta-base"
 
-    score, latency = compute_reproducibility(model_url)
-    print(f"Reproducibility score: {score}")
-    print(f"Computation time: {latency:.2f} seconds")
+    # score, latency = compute_reproducibility(model_url)
+    # print(f"Reproducibility score: {score}")
+    # print(f"Computation time: {latency:.2f} ms")

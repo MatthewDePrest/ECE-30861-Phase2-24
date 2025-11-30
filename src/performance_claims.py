@@ -2,6 +2,7 @@ import os
 import requests
 import json
 import time
+import asyncio
 
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -117,35 +118,35 @@ def evaluate_performance_claims(readme_text: str) -> dict:
 
 
 async def compute(model_url: str, code_url: str, dataset_url: str) -> dict:
-    # start = time.time()
-    # readme = get_model_readme(model_url)
-    # result = evaluate_performance_claims(readme)
-    # latency_ms = (time.time() - start) * 1000
-    # return result["final_score"], latency_ms
-    return 0.0, 0  # Disabled for testing without API access
+    start = time.time()
+    readme = get_model_readme(model_url)
+    result = evaluate_performance_claims(readme)
+    latency_ms = (time.time() - start) * 1000
+    return result["final_score"], latency_ms
+    # return 0, 0  # Disabled for testing without API access
 
-if __name__ == "__main__":
-    print("TEST 1")
-    code_url = "https://github.com/google-research/bert"
-    dataset_url = "https://huggingface.co/datasets/bookcorpus/bookcorpus"
-    model_url = "https://huggingface.co/google-bert/bert-base-uncased"
-    score, latency = compute(model_url, code_url, dataset_url)
-    print(f"Score: {score}")
-    print(f"Computation time: {latency:.2f} ms")
+# if __name__ == "__main__":
+#     print("TEST 1")
+#     code_url = "https://github.com/google-research/bert"
+#     dataset_url = "https://huggingface.co/datasets/bookcorpus/bookcorpus"
+#     model_url = "https://huggingface.co/google-bert/bert-base-uncased"
+#     score, latency = asyncio.run(compute(model_url, code_url, dataset_url))
+#     print(f"Score: {score}")
+#     print(f"Computation time: {latency:.2f} ms")
 
-    print("\nTEST 2")
-    code_url = "https://github.com/huggingface/transformers"  
-    dataset_url = "https://huggingface.co/datasets/none"  
-    model_url = "https://huggingface.co/roberta-base"
-    score, latency = compute(model_url, code_url, dataset_url)
-    print(f"Score: {score}")
-    print(f"Computation time: {latency:.2f} ms")
+#     print("\nTEST 2")
+#     code_url = "https://github.com/huggingface/transformers"  
+#     dataset_url = "https://huggingface.co/datasets/none"  
+#     model_url = "https://huggingface.co/roberta-base"
+#     score, latency = asyncio.run(compute(model_url, code_url, dataset_url))
+#     print(f"Score: {score}")
+#     print(f"Computation time: {latency:.2f} ms")
 
 
-    print("\nTEST 3")
-    code_url    = "https://huggingface.co/chiedo/hello-world"  
-    dataset_url = "https://huggingface.co/datasets/chiedo/hello-world"  
-    model_url   = "https://huggingface.co/chiedo/hello-world"
-    score, latency = compute(model_url, code_url, dataset_url)
-    print(f"Score: {score}")
-    print(f"Computation time: {latency:.2f} ms")
+#     print("\nTEST 3")
+#     code_url    = "https://huggingface.co/chiedo/hello-world"  
+#     dataset_url = "https://huggingface.co/datasets/chiedo/hello-world"  
+#     model_url   = "https://huggingface.co/chiedo/hello-world"
+#     score, latency = asyncio.run(compute(model_url, code_url, dataset_url))
+#     print(f"Score: {score}")
+#     print(f"Computation time: {latency:.2f} ms")
