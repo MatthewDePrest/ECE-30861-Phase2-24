@@ -3,6 +3,7 @@ import requests
 import json
 import time
 import asyncio
+from typing import Tuple
 
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -31,6 +32,10 @@ def get_model_readme(model_url: str) -> str:
         raise ValueError(f"Failed to fetch model info: {response.status_code}")
     
     data = response.json()
+
+    if isinstance(data, list):
+        data = data[0]
+
     card_data = data.get("cardData", {})
     readme = card_data.get("content", "")
     
@@ -117,7 +122,7 @@ def evaluate_performance_claims(readme_text: str) -> dict:
     return scores
 
 
-async def compute(model_url: str, code_url: str, dataset_url: str) -> dict:
+async def compute(model_url: str, code_url: str, dataset_url: str) -> Tuple[float, int]:
     start = time.time()
     readme = get_model_readme(model_url)
     result = evaluate_performance_claims(readme)

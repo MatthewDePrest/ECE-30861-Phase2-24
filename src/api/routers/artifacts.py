@@ -3,6 +3,7 @@ import uuid
 import asyncio
 import tempfile
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Dict, Any
@@ -13,7 +14,8 @@ from pydantic import HttpUrl
 
 from api.models.artifact import (
     Artifact, ArtifactData, ArtifactType, ModelRating, 
-    ArtifactMetadata, ArtifactQuery, EnumerateOffset
+    ArtifactMetadata, ArtifactQuery, EnumerateOffset,
+    ArtifactReturn, ArtifactReturnURL
 )
 
 # Import your metrics computation
@@ -32,6 +34,16 @@ ARTIFACT_STORE: Dict[str, Dict] = {}
 
 USE_LOCAL = False
 USE_AWS = True
+
+# Store for tokens (in-memory for simplicity)
+ACTIVE_TOKENS: Dict[str, Dict] = {}
+
+# Default user credentials
+DEFAULT_USER = {
+    "name": "ece30861defaultadminuser",
+    "password": "correcthorsebatterystaple123(!__+@**(A'\"`;DROP TABLE packages;",
+    "is_admin": True
+}
 
 # HELPERS
 def generate_artifact_id() -> str:
@@ -125,8 +137,8 @@ def check_metrics_threshold(rating: ModelRating) -> bool:
     for metric in non_latency_metrics:
         if metric < 0.5 and metric != -1.0:  # -1.0 is allowed for missing metrics
             # pass for local testing. return false when deploying
-            # return False
-            pass
+            return True
+            # pass
     
     return True
 
@@ -143,10 +155,34 @@ def encode_offset(key: Optional[Dict[str, Any]]) -> Optional[str]:
         return None
     return json.dumps(key)
 
+def generate_download_url(artifact_id: str, artifact_name: str) -> str:
+    """
+    Generate a download URL for the artifact.
+    In production, this should point to your actual file storage endpoint.
+    """
+    # Get the base URL from environment or use current server
+    base_url = os.getenv('BASE_URL', 'http://52.23.239.59:8000')
+    return f"{base_url}/download/{artifact_id}/{artifact_name}"
+
+def validate_token(token: Optional[str]) -> bool:
+    """Validate authentication token. Returns True if valid or if auth not required."""
+    if not token:
+        return True  # Allow if no token provided (for now)
+    
+    # Check if token exists and is valid
+    return token in ACTIVE_TOKENS
+
 # ============================================================================
 # BASELINE ENDPOINTS
 # ============================================================================
-
+@router.put("/authenticate")
+async def authenticate():
+    """Return 501 if authentication is not implemented."""
+    raise HTTPException(
+        status_code=501,
+        detail="This system does not support authentication"
+    )
+    
 @router.post(
     "/artifact/{artifact_type}",
     response_model=Artifact,
@@ -218,6 +254,8 @@ async def create_artifact(
     # aws implementation
     if (USE_AWS):
         await db_service.create_artifact(artifact_record)
+
+    download_url = generate_download_url(artifact_id, artifact_name)
     
     # Return artifact
     return Artifact(
@@ -226,12 +264,15 @@ async def create_artifact(
             id=artifact_id,
             type=artifact_type
         ),
-        data=ArtifactData(url=artifact_data.url)
+        data=ArtifactData(
+            url=artifact_data.url,
+            download_url=download_url
+        )
     )
 
 
 @router.get(
-    "/artifact/{artifact_type}/{id}",
+    "/artifacts/{artifact_type}/{id}",
     response_model=Artifact,
     summary="Retrieve an artifact (BASELINE - Read)"
 )
@@ -260,13 +301,18 @@ async def get_artifact(
             detail="Artifact type mismatch"
         )
     
+    download_url = generate_download_url(artifact['id'], artifact['name'])
+    
     return Artifact(
         metadata=ArtifactMetadata(
             name=artifact['name'],
             id=artifact['id'],
             type=ArtifactType(artifact['type'])
         ),
-        data=ArtifactData(url=artifact['url'])
+        data=ArtifactData(
+            url=artifact['url'],
+            download_url=download_url
+        )
     )
 
 
@@ -366,7 +412,8 @@ async def list_artifacts_endpoint(
     q = queries[0]
 
     name_filter = q.name if q.name else None
-    type_filter = q.types if q.types else None
+    # type_filter = q.types if q.types else None
+    type_filter = [t.value for t in q.types] if q.types else None
 
     # Handle pagination offset for AWS
     last_key = None

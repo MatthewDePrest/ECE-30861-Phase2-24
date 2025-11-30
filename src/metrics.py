@@ -2,7 +2,7 @@ import asyncio
 import time
 from urllib.parse import urlparse
 import logging
-from typing import Dict, TypedDict, Literal
+from typing import Dict, TypedDict, Literal, Tuple
 from utils import UrlCategory, Provider
 
 # Metric function imports
@@ -57,9 +57,17 @@ class GradeResult(TypedDict):
 async def run_metrics(urls: Dict[UrlCategory, str]) -> GradeResult:
 
     start_time = time.time()
-    model_url = urls.get(UrlCategory.MODEL)['url']
-    dataset_url = urls.get(UrlCategory.DATASET) and urls.get(UrlCategory.DATASET)['url']
-    code_url = urls.get(UrlCategory.CODE) and urls.get(UrlCategory.CODE)['url']
+    # model_url = urls.get(UrlCategory.MODEL)['url']
+    # dataset_url = urls.get(UrlCategory.DATASET) and urls.get(UrlCategory.DATASET)['url']
+    # code_url = urls.get(UrlCategory.CODE) and urls.get(UrlCategory.CODE)['url']
+
+    model_url_dict = urls.get(UrlCategory.MODEL) or {}
+    dataset_url_dict = urls.get(UrlCategory.DATASET) or {}
+    code_url_dict = urls.get(UrlCategory.CODE) or {}
+    
+    model_url = model_url_dict.get('url', '')
+    dataset_url = dataset_url_dict.get('url', '')
+    code_url = code_url_dict.get('url', '')
 
     # List of (metric_name, metric_func) pairs
     metric_funcs = [
@@ -106,6 +114,7 @@ async def run_metrics(urls: Dict[UrlCategory, str]) -> GradeResult:
     net_en = 1  # enabled
     if net_en:
         net_score_input = {}
+        metric_scores["dataset_and_code_score"] = (metric_scores.get("dataset_quality", 0.0) + metric_scores.get("code_quality", 0.0)) / 2
         for k, v in metric_scores.items():
             # Only include keys that are intended to be numeric *scores*
             if not k.endswith("_latency") and k not in ["name", "category", "size_score"]:

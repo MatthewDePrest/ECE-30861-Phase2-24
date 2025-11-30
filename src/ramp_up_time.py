@@ -3,7 +3,7 @@ import math
 import time
 import requests
 from urllib.parse import urlparse
-from typing import Optional
+from typing import Optional, Tuple
 
 ERROR_VALUE = -1.0
 
@@ -32,6 +32,8 @@ def get_downloads(model_url: str) -> int:
     data = response.json()
     
     # Some models may not have 'downloads' key
+    if isinstance(data, list):
+        data = data[0]
     downloads = data.get("downloads")
     if downloads is None:
         raise KeyError(f"No 'downloads' field found for model: {model_id}")
@@ -39,7 +41,7 @@ def get_downloads(model_url: str) -> int:
     return downloads
 
 
-async def compute(model_url: str, code_url: str, dataset_url: str) -> float:
+async def compute(model_url: str, code_url: str, dataset_url: str) -> Tuple[float, int]:
     """
     Calculates a ramp-up subscore (0–1) for the given model, code, and dataset URLs.
     Higher means faster ramp-up (popular and responsive).

@@ -8,7 +8,8 @@ from pathlib import Path
 from enum import Enum
 from typing import Dict, Tuple
 from utils import UrlCategory, Provider
-
+from dotenv import load_dotenv
+load_dotenv()
 
 def setup_logger():
     log_file = os.getenv("LOG_FILE", "llm_logs.log")
