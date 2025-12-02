@@ -23,7 +23,11 @@ def extract_score(text: str) -> float:
     return max(0.0, min(1.0, score))
 
 
-async def compute(model_url: str, code_url: Optional[str], dataset_url: Optional[str]) -> Tuple[float, int]:
+async def compute(
+    model_url: str,
+    code_url: Optional[str],
+    dataset_url: Optional[str],
+) -> Tuple[float, int]:
     """
     Grade how well a Hugging Face model's code and dataset are documented.
     

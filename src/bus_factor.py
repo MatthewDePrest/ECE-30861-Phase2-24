@@ -2,12 +2,19 @@ import asyncio
 import math
 import time
 # import logging
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple, Dict, TypeAlias
 from urllib.parse import urlparse
 from huggingface_hub import HfApi
+from huggingface_hub.hf_api import CommitInfo, CommitAuthor  # type: ignore[import]
 
+BusFactorScore: TypeAlias = float
+LatencyMs: TypeAlias = int
 
-async def compute(model_url: str, code_url: Optional[str], dataset_url: Optional[str]) -> Tuple[float, int]:
+async def compute(
+    model_url: str,
+    code_url: Optional[str],
+    dataset_url: Optional[str],
+) -> Tuple[float, int]:
     """
     Computes a 'bus factor' score for a Hugging Face repository.
     The bus factor estimates how resilient a project is to losing top contributors.
@@ -23,28 +30,40 @@ async def compute(model_url: str, code_url: Optional[str], dataset_url: Optional
 
     # # logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
+    # Mark unused parameters to keep linters and type checkers happy
+    _ = code_url
+    _ = dataset_url
+
     if not model_url:
         # logging.warning("No model URL provided; returning default values.")
         return 0.0, 0
 
-    start_time = time.perf_counter()
-    api = HfApi()
+    start_time: float = time.perf_counter()
+    api: HfApi = HfApi()
 
     # Parse owner/repo from the model URL
     try:
-        parts = urlparse(model_url).path.strip("/").split("/")
+        path: str = urlparse(model_url).path
+        parts: list[str] = path.strip("/").split("/")
+
         if len(parts) < 2:
             # logging.error(f"Invalid model URL: {model_url}")
             return 0.0, 0
-        repo_id = f"{parts[0]}/{parts[1]}"
+        
+        owner: str = parts[0]
+        repo_name: str = parts[1]
+        repo_id: str = f"{owner}/{repo_name}"
+
     except Exception as e:
         # logging.exception(f"Error parsing model URL: {e}")
         return 0.0, 0
 
     # Fetch commit info asynchronously via thread executor
     loop = asyncio.get_event_loop()
+
     try:
-        commits = await loop.run_in_executor(None, api.list_repo_commits, repo_id)
+        commits: list[CommitInfo] = await loop.run_in_executor(None, api.list_repo_commits, repo_id)
+    
     except Exception as e:
         # logging.error(f"Could not retrieve commits for {repo_id}: {e}")
         return 0.0, int((time.perf_counter() - start_time) * 1000)
@@ -55,24 +74,26 @@ async def compute(model_url: str, code_url: Optional[str], dataset_url: Optional
 
     # Aggregate contributions per author
     contributions: Dict[str, int] = {}
-    total_commits = 0
+    total_commits: int = 0
+
     for commit in commits:
         for author in commit.authors:
             contributions[author] = contributions.get(author, 0) + 1
             total_commits += 1
 
-    num_contributors = len(contributions)
+    num_contributors: int = len(contributions)
+
     if num_contributors <= 1 or total_commits == 0:
         latency_ms = int((time.perf_counter() - start_time) * 1000)
         return 0.0, latency_ms
 
     # Entropy-based bus factor score
-    entropy = -sum(
+    entropy: float = -sum(
         (count / total_commits) * math.log2(count / total_commits)
         for count in contributions.values()
     )
-    max_entropy = math.log2(num_contributors)
-    bus_factor_score = entropy / max_entropy if max_entropy > 0 else 0.0
+    max_entropy: float = math.log2(num_contributors)
+    bus_factor_score: BusFactorScore = entropy / max_entropy if max_entropy > 0 else 0.0
 
     latency_ms = int((time.perf_counter() - start_time) * 1000)
     # logging.info(f"Computed bus factor = {bus_factor_score:.2f} for {repo_id} in {latency_ms} ms")
