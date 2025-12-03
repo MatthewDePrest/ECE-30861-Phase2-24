@@ -5,7 +5,6 @@ import time
 from typing import Optional, Tuple, Dict, TypeAlias
 from urllib.parse import urlparse
 from huggingface_hub import HfApi
-from huggingface_hub.hf_api import CommitInfo, CommitAuthor  # type: ignore[import]
 
 BusFactorScore: TypeAlias = float
 LatencyMs: TypeAlias = int
@@ -39,7 +38,7 @@ async def compute(
         return 0.0, 0
 
     start_time: float = time.perf_counter()
-    api: HfApi = HfApi()
+    api = HfApi()
 
     # Parse owner/repo from the model URL
     try:
@@ -62,7 +61,7 @@ async def compute(
     loop = asyncio.get_event_loop()
 
     try:
-        commits: list[CommitInfo] = await loop.run_in_executor(None, api.list_repo_commits, repo_id)
+        commits = await loop.run_in_executor(None, api.list_repo_commits, repo_id)
     
     except Exception as e:
         # logging.error(f"Could not retrieve commits for {repo_id}: {e}")

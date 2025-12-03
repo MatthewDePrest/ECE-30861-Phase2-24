@@ -501,6 +501,9 @@ async def rate_model(
             detail="Artifact is not a model"
         )
     
+    print(f"Artifact found: {artifact['name']} (type={artifact['type']})")
+    print(f"Raw rating field in DB: {artifact['rating']}")
+
     rating_data = artifact.get('rating')
     if not rating_data:
         raise HTTPException(
