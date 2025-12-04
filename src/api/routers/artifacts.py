@@ -580,9 +580,6 @@ async def get_artifact_lineage(
     id: str,
     x_authorization: Optional[str] = Header(None)
 ):
-    # 403
-    # if not x_authorization:
-    #     raise HTTPException(status_code=403, detail="Authentication failed")
 
     # Look up artifact
     if USE_LOCAL:
@@ -595,13 +592,14 @@ async def get_artifact_lineage(
         if not artifact:
             raise HTTPException(status_code=404, detail="Artifact does not exist")
 
-    # Validate lineage metadata
+    # Get lineage, provide a default if missing
     lineage = artifact.get("lineage")
     if not lineage or "nodes" not in lineage or "edges" not in lineage:
-        raise HTTPException(
-            status_code=400,
-            detail="The lineage graph cannot be computed because the artifact metadata is missing or malformed."
-        )
+        # Provide a default minimal lineage
+        lineage = {
+            "nodes": [{"artifact_id": int(id), "name": artifact.get("metadata", {}).get("name", ""), "source": "unknown"}],
+            "edges": []
+        }
 
     # Build Pydantic response
     nodes = [LineageNode(**node) for node in lineage["nodes"]]
