@@ -64,7 +64,7 @@ async def run_metrics(urls: Dict[UrlCategory, str]) -> GradeResult:
     model_url_dict = urls.get(UrlCategory.MODEL) or {}
     dataset_url_dict = urls.get(UrlCategory.DATASET) or {}
     code_url_dict = urls.get(UrlCategory.CODE) or {}
-    
+
     model_url = model_url_dict.get('url', '')
     dataset_url = dataset_url_dict.get('url', '')
     code_url = code_url_dict.get('url', '')
@@ -128,7 +128,7 @@ async def run_metrics(urls: Dict[UrlCategory, str]) -> GradeResult:
 
 
     final_ordered_scores: GradeResult = {}
-    
+
     # 1. Name and Category
     final_ordered_scores["name"] = metric_scores.get("name")
     final_ordered_scores["category"] = metric_scores.get("category")
@@ -146,10 +146,10 @@ async def run_metrics(urls: Dict[UrlCategory, str]) -> GradeResult:
     final_ordered_scores["performance_claims_latency"] = metric_scores.get("performance_claims_latency")
     final_ordered_scores["license"] = metric_scores.get("license")
     final_ordered_scores["license_latency"] = metric_scores.get("license_latency")
-    
+
     final_ordered_scores["size_score"] = metric_scores.get("size_score")
     final_ordered_scores["size_score_latency"] = metric_scores.get("size_score_latency")
-    
+
     final_ordered_scores["dataset_and_code_score"] = metric_scores.get("dataset_and_code_score")
     final_ordered_scores["dataset_and_code_score_latency"] = metric_scores.get("dataset_and_code_score_latency")
     final_ordered_scores["dataset_quality"] = metric_scores.get("dataset_quality")
