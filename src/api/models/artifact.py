@@ -81,7 +81,6 @@ class ModelRating(BaseModel):
 
 # --- Additional Phase 2 Requirements ---
 class ArtifactCost(BaseModel):
-    """Artifact cost information."""
     standalone_cost: Optional[float] = None
     total_cost: float
 

@@ -36,8 +36,8 @@ router = APIRouter(tags=["Artifacts"])
 # In-memory storage for development (replace with DynamoDB later)
 ARTIFACT_STORE: Dict[str, Dict] = {}
 
-USE_LOCAL = False
-USE_AWS = True
+USE_LOCAL = True#False
+USE_AWS = False#True
 
 # Store for tokens (in-memory for simplicity)
 ACTIVE_TOKENS: Dict[str, Dict] = {}
@@ -519,7 +519,7 @@ async def rate_model(
 
 @router.get(
     "/artifact/{artifact_type}/{id}/cost",
-    response_model=ArtifactCost,
+    response_model=Dict[str, ArtifactCost],
     summary="Get the cost of an artifact (BASELINE)"
 )
 async def get_artifact_cost(
@@ -561,9 +561,10 @@ async def get_artifact_cost(
             }
         else:
             cost_data[id] = {
+                "standalone_cost": artifact.get("cost", 100.0),
                 "total_cost": artifact.get("cost", 100.0)
             }
-        return ArtifactCost(**cost_data)
+        return cost_data#ArtifactCost(__root__=cost_data)
     except Exception:
         raise HTTPException(
             status_code=500,
@@ -576,12 +577,12 @@ async def get_artifact_cost(
     summary="Retrieve the lineage graph for this artifact. (BASELINE)"
 )
 async def get_artifact_lineage(
-    id: int,
-    x_authorization: str = Header(..., alias="X-Authorization")
+    id: str,
+    x_authorization: Optional[str] = Header(None)
 ):
     # 403
-    if not x_authorization:
-        raise HTTPException(status_code=403, detail="Authentication failed")
+    # if not x_authorization:
+    #     raise HTTPException(status_code=403, detail="Authentication failed")
 
     # Look up artifact
     if USE_LOCAL:
@@ -616,7 +617,7 @@ async def get_artifact_lineage(
 async def license_check(
     id: str,
     request: SimpleLicenseCheckRequest,
-    x_authorization: str = Header(...)
+    x_authorization: Optional[str] = Header(None)
 ):
     """
     Check if the license of the given model artifact is compatible
@@ -625,6 +626,7 @@ async def license_check(
     # Local implementation
     if USE_LOCAL:
         artifact = ARTIFACT_STORE.get(id)
+        print(ARTIFACT_STORE[id]["lineage"])
         if not artifact:
             raise HTTPException(status_code=404, detail="Artifact does not exist")
     
@@ -644,7 +646,7 @@ async def license_check(
 )
 async def get_artifacts_by_regex(
     artifact_regex: ArtifactRegEx,
-    x_authorization: str = Header(..., alias="X-Authorization")
+    x_authorization: Optional[str] = Header(None)
 ):
     # TODO: Validate X-Authorization if needed
     if not x_authorization:
