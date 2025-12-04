@@ -15,7 +15,11 @@ from pydantic import HttpUrl
 from api.models.artifact import (
     Artifact, ArtifactData, ArtifactType, ModelRating, 
     ArtifactMetadata, ArtifactQuery, EnumerateOffset,
-    ArtifactReturn, ArtifactReturnURL
+    ArtifactReturn, ArtifactReturnURL,
+    ArtifactCost,
+    ArtifactLineageGraph, LineageNode, LineageEdge,
+    SimpleLicenseCheckRequest,
+    ArtifactRegEx
 )
 
 # Import your metrics computation
@@ -510,6 +514,154 @@ async def rate_model(
     
     return ModelRating(**rating_data)
 
+@router.get(
+    "/artifact/{artifact_type}/{id}/cost",
+    response_model=ArtifactCost,
+    summary="Get the cost of an artifact (BASELINE)"
+)
+async def get_artifact_cost(
+    artifact_type: ArtifactType,
+    id: str,
+    dependency: bool = False,
+    x_authorization: Optional[str] = Header(None)
+):
+    """Retrieve the cost of an artifact, optionally including dependencies."""
+    
+    # local implementation
+    if USE_LOCAL:
+        if id not in ARTIFACT_STORE:
+            raise HTTPException(status_code=404, detail="Artifact does not exist")
+        artifact = ARTIFACT_STORE[id]
+
+    # aws implementation
+    if USE_AWS:
+        artifact = await db_service.get_artifact(id)
+        if not artifact:
+            raise HTTPException(status_code=404, detail="Artifact does not exist")
+    
+    # Basic validation
+    if artifact['type'] != artifact_type:
+        raise HTTPException(
+            status_code=400,
+            detail="Artifact type does not match"
+        )
+    
+    # Compute cost
+    try:
+        # Placeholder: example logic for cost
+        cost_data = {}
+        if dependency:
+            # Example: include dependent artifacts if any
+            cost_data[id] = {
+                "standalone_cost": artifact.get("cost", 100.0),
+                "total_cost": artifact.get("cost", 100.0) * 2  # pretend dependencies double the cost
+            }
+        else:
+            cost_data[id] = {
+                "total_cost": artifact.get("cost", 100.0)
+            }
+        return ArtifactCost(**cost_data)
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="The artifact cost calculator encountered an error"
+        )
+
+@router.get(
+    "/artifact/model/{id}/lineage",
+    response_model=ArtifactLineageGraph,
+    summary="Retrieve the lineage graph for this artifact. (BASELINE)"
+)
+async def get_artifact_lineage(
+    id: int,
+    x_authorization: str = Header(..., alias="X-Authorization")
+):
+    # 403
+    if not x_authorization:
+        raise HTTPException(status_code=403, detail="Authentication failed")
+
+    # Look up artifact
+    if USE_LOCAL:
+        if id not in ARTIFACT_STORE:
+            raise HTTPException(status_code=404, detail="Artifact does not exist")
+        artifact = ARTIFACT_STORE[id]
+
+    if USE_AWS:
+        artifact = await db_service.get_artifact(id)
+        if not artifact:
+            raise HTTPException(status_code=404, detail="Artifact does not exist")
+
+    # Validate lineage metadata
+    lineage = artifact.get("lineage")
+    if not lineage or "nodes" not in lineage or "edges" not in lineage:
+        raise HTTPException(
+            status_code=400,
+            detail="The lineage graph cannot be computed because the artifact metadata is missing or malformed."
+        )
+
+    # Build Pydantic response
+    nodes = [LineageNode(**node) for node in lineage["nodes"]]
+    edges = [LineageEdge(**edge) for edge in lineage["edges"]]
+
+    return ArtifactLineageGraph(nodes=nodes, edges=edges)
+
+@router.post(
+    "/artifact/model/{id}/license-check",
+    response_model=bool,
+    summary="Assess license compatibility for fine-tune and inference usage. (BASELINE)"
+)
+async def license_check(
+    id: str,
+    request: SimpleLicenseCheckRequest,
+    x_authorization: str = Header(...)
+):
+    """
+    Check if the license of the given model artifact is compatible
+    with the intended usage based on a GitHub URL.
+    """
+    # Local implementation
+    if USE_LOCAL:
+        artifact = ARTIFACT_STORE.get(id)
+        if not artifact:
+            raise HTTPException(status_code=404, detail="Artifact does not exist")
+    
+    # AWS implementation
+    if USE_AWS:
+        artifact = await db_service.get_artifact(id)
+        if not artifact:
+            raise HTTPException(status_code=404, detail="Artifact does not exist")
+    
+    # Simplified check: always return True for baseline
+    return True
+
+@router.post(
+    "/artifact/byRegEx",
+    response_model=List[ArtifactMetadata],
+    summary="Get any artifacts fitting the regular expression (BASELINE)"
+)
+async def get_artifacts_by_regex(
+    artifact_regex: ArtifactRegEx,
+    x_authorization: str = Header(..., alias="X-Authorization")
+):
+    # TODO: Validate X-Authorization if needed
+    if not x_authorization:
+        raise HTTPException(status_code=403, detail="Authentication failed")
+
+    # Get all artifacts from DynamoDB
+    artifacts, _ = await db_service.list_artifacts(limit=1000)  # adjust limit as needed
+
+    import re
+    pattern = re.compile(artifact_regex.regex)
+    matching = [
+        ArtifactMetadata(id=str(a["id"]), name=a["name"], type=a["type"])
+        for a in artifacts
+        if pattern.search(a["name"])
+    ]
+
+    if not matching:
+        raise HTTPException(status_code=404, detail="No artifact found under this regex")
+
+    return matching
 
 # ============================================================================
 # ADDITIONAL ENDPOINTS
