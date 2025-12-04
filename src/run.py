@@ -181,6 +181,19 @@ def urls_processor(urls_file: str) -> Dict:
             # Write result as NDJSON to stdout
             sys.stdout.write(json.dumps(result, separators=(',', ':')) + '\n')
             sys.stdout.flush()  # Ensure immediate output
+
+            # Upload to S3
+            from s3_utils import save_result_to_s3
+            bucket = "30861project"
+            if bucket:
+                try:
+                    s3_url = save_result_to_s3(result, bucket)
+                    print(f"S3_DOWNLOAD_URL={s3_url}")
+                except Exception as e:
+                    logger.error(f"Failed to upload to S3: {e}")
+            else:
+                logger.warning("RESULTS_BUCKET not set — skipping S3 upload.")
+
             
             all_results.append(result)
 
