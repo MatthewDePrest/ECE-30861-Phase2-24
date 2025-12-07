@@ -1,5 +1,3 @@
-# category.py
-
 import time
 from typing import Optional, Tuple
 

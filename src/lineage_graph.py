@@ -1,5 +1,3 @@
-# lineage_utils.py
-
 import json
 import os
 import time

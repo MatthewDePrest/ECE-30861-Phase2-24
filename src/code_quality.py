@@ -1,4 +1,3 @@
-# metrics/code_quality.py
 import tempfile
 import time
 import shutil
