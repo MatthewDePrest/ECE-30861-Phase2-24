@@ -81,10 +81,36 @@ class ModelRating(BaseModel):
 
 # --- Additional Phase 2 Requirements ---
 class ArtifactCost(BaseModel):
-    """Artifact cost information."""
     standalone_cost: Optional[float] = None
     total_cost: float
 
 class EnumerateOffset(str):
     """Pagination offset."""
     pass
+
+
+class LineageNode(BaseModel):
+    artifact_id: int
+    name: str
+    source: str
+
+
+class LineageEdge(BaseModel):
+    from_node_artifact_id: int
+    to_node_artifact_id: int
+    relationship: str
+
+
+class ArtifactLineageGraph(BaseModel):
+    nodes: List[LineageNode]
+    edges: List[LineageEdge]
+
+
+class SimpleLicenseCheckRequest(BaseModel):
+    """Request body for a simple license check."""
+    github_url: HttpUrl = Field(..., description="GitHub URL of the project to check")
+
+
+class ArtifactRegEx(BaseModel):
+    """Request schema for searching artifacts by regex."""
+    regex: str = Field(..., description="Regular expression to search artifact names or metadata")
