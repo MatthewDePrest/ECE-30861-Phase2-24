@@ -1,5 +1,3 @@
-# metrics/license_score.py
-
 import time
 from typing import Any, Dict, Optional, Tuple, TypeAlias
 

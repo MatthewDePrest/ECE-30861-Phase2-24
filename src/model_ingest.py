@@ -1,10 +1,35 @@
-from typing import Dict, TypedDict, Literal
+from __future__ import annotations
+
+import random
+from typing import Final, Tuple
+
 from metrics import GradeResult, SizeScore
 
-def model_ingest(metric_scores: GradeResult) -> bool:
-    # Add all the metrics that need to be checked here. (EXCEPT SIZE)
-    # It should include all non-latency metrics that have subscores.
-    metrics_to_check = [
+# Global default threshold for “good enough” scores
+DEFAULT_THRESHOLD: Final[float] = 0.5
+
+
+def model_ingest(
+    metric_scores: GradeResult,
+    threshold: float = DEFAULT_THRESHOLD,
+) -> bool:
+    """
+    Decide whether a model should be ingested/accepted based on its metric scores.
+
+    The rule is:
+      1. All non-latency scalar metrics listed in `metrics_to_check` must be
+         >= `threshold`.
+      2. All hardware-specific `size_score` subscores must be >= `threshold`.
+
+    Args:
+        metric_scores: A `GradeResult` dictionary produced by the grading pipeline.
+        threshold: Minimum acceptable score for each metric (default: 0.5).
+
+    Returns:
+        True if the model passes all checks, False otherwise.
+    """
+    # All scalar metrics (excluding latencies and size_score) that must pass.
+    metrics_to_check: Tuple[str, ...] = (
         "net_score",
         "ramp_up_time",
         "bus_factor",
@@ -13,20 +38,25 @@ def model_ingest(metric_scores: GradeResult) -> bool:
         "dataset_and_code_score",
         "dataset_quality",
         "code_quality",
-    ]
+    )
 
-    for metric in metrics_to_check:
-        if metric_scores[metric] < 0.5:
+    # Check the scalar metrics against the threshold.
+    for metric_name in metrics_to_check:
+        if metric_scores[metric_name] < threshold:
             return False
 
-    # Size has its own subscores so do that separately
-    for size_metric, size_subscore in metric_scores["size_score"].items():
-        if size_subscore < 0.5:
+    # Size has its own subscores (one per hardware target), so check them separately.
+    size_scores: SizeScore = metric_scores["size_score"]
+    for hardware_name, size_subscore in size_scores.items():
+        if size_subscore < threshold:
             return False
 
+    # If we reached here, all checks passed.
     return True
 
-# --- Test Data ---
+
+# --- Test Data / Example Usage ---
+
 sample_good_result: GradeResult = {
     "name": "Good Model",
     "category": "MODEL",
@@ -69,7 +99,7 @@ sample_bad_result: GradeResult = {
     "license": 0.9,
     "license_latency": 70,
     "size_score": {
-        "raspberry_pi": 0.4,
+        "raspberry_pi": 0.4,  # Fails threshold here
         "jetson_nano": 0.6,
         "desktop_pc": 0.8,
         "aws_server": 0.9,
@@ -83,7 +113,6 @@ sample_bad_result: GradeResult = {
     "code_quality_latency": 55,
 }
 
-import random
 sample_random_result: GradeResult = {
     "name": "Random Model",
     "category": "MODEL",
@@ -112,8 +141,10 @@ sample_random_result: GradeResult = {
     "code_quality_latency": random.randint(30, 300),
 }
 
-print(sample_random_result)
-print()
-print("Expected True from sample_good_result: ", model_ingest(sample_good_result))
-print("Expected False from sample_bad_result: ", model_ingest(sample_bad_result))
-print("Manually verify for sample_random_result: ", model_ingest(sample_random_result))
+
+if __name__ == "__main__":
+    print("sample_random_result:", sample_random_result)
+    print()
+    print("Expected True from sample_good_result:  ", model_ingest(sample_good_result))
+    print("Expected False from sample_bad_result:  ", model_ingest(sample_bad_result))
+    print("Manual check for sample_random_result: ", model_ingest(sample_random_result))

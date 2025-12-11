@@ -1,18 +1,21 @@
-# metrics/size_score.py
-import time
 import logging
-from typing import Optional, Tuple, Dict
+import time
+from typing import Dict, Final, Optional, Tuple, TypeAlias
 
-# Default score if metric fails
-ERROR_VALUE: Dict[str, float] = {
+# Type aliases for clarity / consistency
+SizeScore: TypeAlias = Dict[str, float]  # per-device scores in [0.0, 1.0]
+LatencyMs: TypeAlias = int
+
+# Default score if metric fails (all devices considered incompatible)
+ERROR_VALUE: Final[SizeScore] = {
     "raspberry_pi": 0.0,
     "jetson_nano": 0.0,
     "desktop_pc": 0.0,
     "aws_server": 0.0,
 }
 
-# Device capacity thresholds in GB
-DEVICE_LIMITS: Dict[str, float] = {
+# Device capacity thresholds in GB (approximate VRAM / RAM budgets)
+DEVICE_LIMITS: Final[Dict[str, float]] = {
     "raspberry_pi": 0.5,
     "jetson_nano": 1.5,
     "desktop_pc": 10.0,
@@ -25,28 +28,48 @@ def _estimate_model_size_gb(model_url: str) -> float:
     Estimate the size of a Hugging Face model in GB.
 
     Strategy:
-    1. Try Hugging Face API (`siblings` list sizes).
-    2. Fallback: heuristic guesses based on model name keywords.
-    3. Default to ~5 GB if nothing found.
+      1. Try Hugging Face API: sum the `size` fields in the `siblings` list.
+      2. Fallback to heuristic guesses based on model name keywords.
+      3. Default to ~5 GB if nothing is found.
+
+    Args:
+        model_url: Hugging Face model URL, e.g.
+                   "https://huggingface.co/google-bert/bert-base-uncased".
+
+    Returns:
+        Estimated size in gigabytes (float).
     """
-    
-    import requests
+    import requests  # local import to keep global deps small
 
-    # --- API attempt ---
     try:
-        model_id = model_url.rstrip("/").split("huggingface.co/")[-1]
-        resp = requests.get(f"https://huggingface.co/api/models/{model_id}", timeout=10)
-        resp.raise_for_status()
-        data = resp.json()
-        total_size_bytes = sum(f.get("size", 0) for f in data.get("siblings", []))
-        if total_size_bytes > 0:
-            logging.debug(f"[size_score] HF API size for {model_url}: {total_size_bytes} bytes")
-            return total_size_bytes / (1024**3)  # bytes → GB
-    except Exception as e:
-        logging.debug(f"[size_score] HF API failed for {model_url}: {e}")
+        # Extract "owner/model" from the URL
+        model_id: str = model_url.rstrip("/").split("huggingface.co/")[-1]
+        api_url: str = f"https://huggingface.co/api/models/{model_id}"
 
-    # --- Heuristic fallback ---
-    lower = model_url.lower()
+        resp: requests.Response = requests.get(api_url, timeout=10)
+        resp.raise_for_status()
+
+        data = resp.json()
+        total_size_bytes: int = sum(
+            f.get("size", 0) for f in data.get("siblings", [])
+        )
+        if total_size_bytes > 0:
+            logging.debug(
+                "[size_score] HF API size for %s: %d bytes",
+                model_url,
+                total_size_bytes,
+            )
+            return total_size_bytes / (1024**3)  # bytes → GB
+
+    except Exception as exc:
+        logging.debug(
+            "[size_score] HF API failed for %s: %s",
+            model_url,
+            exc,
+        )
+
+    # --- Heuristic fallback based on model name keywords ---
+    lower: str = model_url.lower()
     if "tiny" in lower or "small" in lower:
         return 0.2
     if "base" in lower:
@@ -58,34 +81,52 @@ def _estimate_model_size_gb(model_url: str) -> float:
     if "xl" in lower or "xxl" in lower:
         return 20.0
 
-    # --- Default ---
+    # --- Default catch-all size ---
     return 5.0
 
 
-async def compute(model_url: str, code_url: Optional[str], dataset_url: Optional[str]) -> Tuple[float, int]:
+async def compute(
+    model_url: str,
+    code_url: Optional[str],
+    dataset_url: Optional[str],
+) -> Tuple[SizeScore, LatencyMs]:
     """
     Compute hardware compatibility (size_score) for a model.
 
+    The score is per-device, based on how the estimated model size compares
+    to a device-specific capacity limit:
+
+        - 1.0: model_size ≤ 0.5 * limit
+        - 0.5: 0.5 * limit < model_size ≤ limit
+        - 0.0: model_size > limit
+
     Args:
         model_url: Hugging Face model URL.
-        code_url: GitHub repo URL (unused in this metric, but required for consistency).
-        dataset_url: Dataset URL (unused in this metric, but required for consistency).
+        code_url: URL for associated code repository (unused here).
+        dataset_url: URL for associated dataset (unused here).
 
     Returns:
-        (scores: dict[str, float], latency_ms: float)
+        (scores, latency_ms)
+          - scores: dict mapping device names → [0.0, 1.0] scores.
+          - latency_ms: total computation time in milliseconds.
     """
-    start = time.perf_counter()
+    # Unused in this metric, but kept for a consistent interface
+    _ = code_url
+    _ = dataset_url
+
+    start: float = time.perf_counter()
 
     if not model_url or "huggingface.co" not in model_url:
         logging.warning("[size_score] No valid Hugging Face model URL.")
-        return ERROR_VALUE, (time.perf_counter() - start) * 1000
+        latency_ms: LatencyMs = int((time.perf_counter() - start) * 1000)
+        return ERROR_VALUE, latency_ms
 
     try:
-        # Step 1. Estimate model size
-        model_size_gb = _estimate_model_size_gb(model_url)
+        # Step 1: Estimate model size in GB
+        model_size_gb: float = _estimate_model_size_gb(model_url)
 
-        # Step 2. Apply thresholds to produce device-specific scores
-        scores: Dict[str, float] = {}
+        # Step 2: Apply thresholds to produce device-specific scores
+        scores: SizeScore = {}
         for device, limit in DEVICE_LIMITS.items():
             if model_size_gb <= limit * 0.5:
                 score = 1.0
@@ -95,10 +136,10 @@ async def compute(model_url: str, code_url: Optional[str], dataset_url: Optional
                 score = 0.0
             scores[device] = score
 
-        latency_ms = (time.perf_counter() - start) * 1000
-        return scores, round(latency_ms)
+        latency_ms = int((time.perf_counter() - start) * 1000)
+        return scores, latency_ms
 
-    except Exception as e:
-        logging.error(f"[size_score] Error computing for {model_url}: {e}")
-        latency_ms = (time.perf_counter() - start) * 1000
-        return ERROR_VALUE, round(latency_ms)
+    except Exception as exc:
+        logging.error("[size_score] Error computing for %s: %s", model_url, exc)
+        latency_ms = int((time.perf_counter() - start) * 1000)
+        return ERROR_VALUE, latency_ms
