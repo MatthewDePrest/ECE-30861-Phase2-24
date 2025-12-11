@@ -39,6 +39,9 @@ ARTIFACT_STORE: Dict[str, Dict] = {}
 USE_LOCAL = False
 USE_AWS = True
 
+# USE_LOCAL = True
+# USE_AWS = False
+
 # Store for tokens (in-memory for simplicity)
 ACTIVE_TOKENS: Dict[str, Dict] = {}
 
