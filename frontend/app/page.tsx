@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Plus, Search, Eye, Pencil, Trash2, Bot, Database, Code } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -11,12 +11,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
-
-// CHANGE: remove useToast import
-// import { useToast } from "@/hooks/use-toast"
-
-// CHANGE: add sonner import
 import { toast } from "sonner"
+
+const BASE_URL = "http://52.23.239.59:8000"
 
 type ArtifactType = "model" | "dataset" | "code"
 
@@ -29,65 +26,136 @@ interface Artifact {
 
 export default function DashboardPage() {
   const router = useRouter()
-
-  // CHANGE: removed toast destructuring
-  // const { toast } = useToast()
-
   const [artifactType, setArtifactType] = useState<ArtifactType>("model")
   const [artifactUrl, setArtifactUrl] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState("all")
   const [isRegistering, setIsRegistering] = useState(false)
 
-  const [artifacts, setArtifacts] = useState<Artifact[]>([
-    { id: "123456", name: "GPT-2 Model", type: "model", url: "https://huggingface.co/gpt2" },
-    { id: "789012", name: "ImageNet Dataset", type: "dataset", url: "https://huggingface.co/datasets/imagenet" },
-    { id: "345678", name: "Training Script", type: "code", url: "https://github.com/example/repo" },
-  ])
+  // const [artifacts, setArtifacts] = useState<Artifact[]>([
+  //   { id: "123456", name: "GPT-2 Model", type: "model", url: "https://huggingface.co/gpt2" },
+  //   { id: "789012", name: "ImageNet Dataset", type: "dataset", url: "https://huggingface.co/datasets/imagenet" },
+  //   { id: "345678", name: "Training Script", type: "code", url: "https://github.com/example/repo" },
+  // ])
+
+  const [artifacts, setArtifacts] = useState<Artifact[]>([])
+
+  useEffect(() => {
+    loadArtifacts()
+  }, [])
+
+  async function loadArtifacts(offset?: string) {
+    try {
+      const response = await fetch(`${BASE_URL}/artifacts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify([{ name: "*" }])
+      })
+
+      if (!response.ok) {
+        toast.error("Failed to load artifacts")
+        return
+      }
+
+      const data = await response.json()
+
+      const mapped = data.map((a: any) => ({
+        id: a.id.toString(),
+        name: a.name,
+        type: a.type
+      }))
+
+      setArtifacts(mapped)
+    } catch {
+      toast.error("Failed to load artifacts")
+    }
+  }
 
   const handleRegister = async () => {
     if (!artifactUrl) {
-      // CHANGE: use sonner
       toast.error("Please enter a source URL")
       return
     }
 
-    setIsRegistering(true)
+  setIsRegistering(true)
     try {
-      const response = await fetch(`/api/artifact/${artifactType}`, {
+      const response = await fetch(`${BASE_URL}/artifact/${artifactType}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: artifactUrl }),
+        body: JSON.stringify({ url: artifactUrl })
       })
 
-      if (response.ok) {
-        const newArtifact = await response.json()
-        setArtifacts([newArtifact, ...artifacts])
-        setArtifactUrl("")
-
-        // CHANGE: use sonner
-        toast.success("Artifact registered successfully")
+      if (!response.ok) {
+        toast.error("Failed to register artifact")
+        return
       }
-    } catch (error) {
-      // CHANGE: use sonner
+
+      const result = await response.json()
+      const { metadata, data } = result
+
+      const newArtifact = {
+        id: metadata.id.toString(),
+        name: metadata.name,
+        type: metadata.type,
+        url: data?.url
+      }
+
+      setArtifacts([newArtifact, ...artifacts])
+      setArtifactUrl("")
+      toast.success("Artifact registered successfully")
+    } catch {
       toast.error("Failed to register artifact")
     } finally {
       setIsRegistering(false)
     }
   }
 
+
+  // const handleRegister = async () => {
+  //   if (!artifactUrl) {
+  //     toast.error("Please enter a source URL")
+  //     return
+  //   }
+
+  //   setIsRegistering(true)
+  //   try {
+  //     const response = await fetch(`/api/artifact/${artifactType}`, {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({ url: artifactUrl }),
+  //     })
+
+  //     if (response.ok) {
+  //       const newArtifact = await response.json()
+  //       setArtifacts([newArtifact, ...artifacts])
+  //       setArtifactUrl("")
+  //       toast.success("Artifact registered successfully")
+  //     }
+  //   } catch (error) {
+  //     toast.error("Failed to register artifact")
+  //   } finally {
+  //     setIsRegistering(false)
+  //   }
+  // }
+
   const handleDelete = async (id: string, type: ArtifactType) => {
     try {
-      await fetch(`/api/artifacts/${type}/${id}`, { method: "DELETE" })
-      setArtifacts(artifacts.filter((a) => a.id !== id))
+      const response = await fetch(`${BASE_URL}/artifacts/${type}/${id}`, {
+        method: "DELETE"
+      })
 
-      // CHANGE: use sonner
+      if (!response.ok) {
+        toast.error("Failed to delete artifact")
+        return
+      }
+
+      setArtifacts(artifacts.filter((a) => a.id !== id))
       toast.success("Artifact deleted successfully")
-    } catch (error) {
-      // CHANGE: use sonner
+    } catch {
       toast.error("Failed to delete artifact")
     }
   }
+
 
   const filteredArtifacts = artifacts.filter((artifact) => {
     const matchesSearch =
@@ -229,14 +297,13 @@ export default function DashboardPage() {
                           aria-label="Edit artifact"
                           className="focus:ring-2 focus:ring-blue-500"
                           onClick={() => {
-                            // CHANGE: use sonner
                             toast.info("Edit functionality coming soon")
                           }}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
 
-                        <Button
+                        <Button 
                           variant="ghost"
                           size="sm"
                           aria-label="Delete artifact"
