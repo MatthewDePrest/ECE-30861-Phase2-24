@@ -1,5 +1,5 @@
-2025-12-03 02:23:26,206 - INFO - Processing URLs from file: single_url.txt
-2025-12-03 02:23:26,540 - INFO - Read 1 lines from single_url.txt.
-2025-12-03 02:23:26,540 - INFO - Processing line 1: https://huggingface.co/google-bert/bert-base-uncased
-2025-12-03 02:23:27,606 - INFO - Cloning https://github.com/google-research/bert into C:\Users\hitae\AppData\Local\Temp\code_quality_k543amha\repo
-2025-12-03 02:23:34,390 - INFO - Processed 1 URLs successfully out of 1 total lines.
+2025-12-04 10:07:47,950 - INFO - Processing URLs from file: single_url.txt
+2025-12-04 10:07:48,391 - INFO - Read 1 lines from single_url.txt.
+2025-12-04 10:07:48,391 - INFO - Processing line 1: https://huggingface.co/google-bert/bert-base-uncased
+2025-12-04 10:07:48,552 - INFO - Cloning https://github.com/google-research/bert into C:\Users\anish\AppData\Local\Temp\code_quality_duy_f93w\repo
+2025-12-04 10:07:53,312 - INFO - Processed 1 URLs successfully out of 1 total lines.

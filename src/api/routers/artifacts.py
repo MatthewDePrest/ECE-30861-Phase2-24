@@ -517,6 +517,57 @@ async def rate_model(
     
     return ModelRating(**rating_data)
 
+@router.post(
+    "/artifact/search/byRegEx",
+    response_model=List[ArtifactMetadata],
+    summary="Get any artifacts fitting the regular expression (BASELINE)"
+)
+async def get_artifacts_by_regex(
+    artifact_regex: ArtifactRegEx,
+    x_authorization: Optional[str] = Header(None)
+):
+    """
+    Search artifacts by regex against their names.
+    """
+
+    # Retrieve artifacts depending on mode
+    if USE_LOCAL:
+        artifacts = [
+            {
+                "id": k,
+                "name": v["name"],
+                "type": v["type"]
+            }
+            for k, v in ARTIFACT_STORE.items()
+        ]
+    elif USE_AWS:
+        artifacts, _ = await db_service.list_artifacts(limit=1000)
+    else:
+        raise HTTPException(status_code=500, detail="Server misconfiguration")
+
+    # Validate regex
+    import re
+    try:
+        pattern = re.compile(artifact_regex.regex)
+    except re.error:
+        raise HTTPException(status_code=400, detail="Invalid regular expression")
+
+    # Filter by regex
+    matching = [
+        ArtifactMetadata(
+            id=str(a["id"]),
+            name=a["name"],
+            type=a["type"]
+        )
+        for a in artifacts
+        if pattern.search(a["name"])
+    ]
+
+    if not matching:
+        raise HTTPException(status_code=404, detail="No artifact found under this regex")
+
+    return matching
+
 @router.get(
     "/artifact/{artifact_type}/{id}/cost",
     response_model=Dict[str, ArtifactCost],
@@ -624,47 +675,19 @@ async def license_check(
     # Local implementation
     if USE_LOCAL:
         artifact = ARTIFACT_STORE.get(id)
-        print(ARTIFACT_STORE[id]["lineage"])
         if not artifact:
             raise HTTPException(status_code=404, detail="Artifact does not exist")
-    
+
+        # Safe print
+        print(artifact.get("lineage"))
+
     # AWS implementation
     if USE_AWS:
         artifact = await db_service.get_artifact(id)
         if not artifact:
             raise HTTPException(status_code=404, detail="Artifact does not exist")
-    
-    # Simplified check: always return True for baseline
+
     return True
-
-@router.post(
-    "/artifact/byRegEx",
-    response_model=List[ArtifactMetadata],
-    summary="Get any artifacts fitting the regular expression (BASELINE)"
-)
-async def get_artifacts_by_regex(
-    artifact_regex: ArtifactRegEx,
-    x_authorization: Optional[str] = Header(None)
-):
-    # TODO: Validate X-Authorization if needed
-    if not x_authorization:
-        raise HTTPException(status_code=403, detail="Authentication failed")
-
-    # Get all artifacts from DynamoDB
-    artifacts, _ = await db_service.list_artifacts(limit=1000)  # adjust limit as needed
-
-    import re
-    pattern = re.compile(artifact_regex.regex)
-    matching = [
-        ArtifactMetadata(id=str(a["id"]), name=a["name"], type=a["type"])
-        for a in artifacts
-        if pattern.search(a["name"])
-    ]
-
-    if not matching:
-        raise HTTPException(status_code=404, detail="No artifact found under this regex")
-
-    return matching
 
 # ============================================================================
 # ADDITIONAL ENDPOINTS
