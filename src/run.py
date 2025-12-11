@@ -203,7 +203,7 @@ def urls_processor(urls_file: str) -> Dict[str, Any]:
             if bucket:
                 try:
                     s3_url = save_result_to_s3(result, bucket)
-                    print(f"S3_DOWNLOAD_URL={s3_url}")
+                    #print(f"S3_DOWNLOAD_URL={s3_url}")
                 except Exception as e:
                     logger.error(f"Failed to upload to S3: {e}")
             else:
