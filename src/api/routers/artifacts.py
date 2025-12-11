@@ -36,8 +36,8 @@ router = APIRouter(tags=["Artifacts"])
 # In-memory storage for development (replace with DynamoDB later)
 ARTIFACT_STORE: Dict[str, Dict] = {}
 
-USE_LOCAL = True#False
-USE_AWS = False#True
+USE_LOCAL = False
+USE_AWS = True
 
 # Store for tokens (in-memory for simplicity)
 ACTIVE_TOKENS: Dict[str, Dict] = {}
@@ -321,7 +321,7 @@ async def get_artifact(
 
 
 @router.put(
-    "/artifact/{artifact_type}/{id}",
+    "/artifacts/{artifact_type}/{id}",
     summary="Update an artifact (BASELINE - Update)"
 )
 async def update_artifact(
@@ -367,7 +367,7 @@ async def update_artifact(
 
 
 @router.delete(
-    "/artifact/{artifact_type}/{id}",
+    "/artifacts/{artifact_type}/{id}",
     summary="Delete an artifact (NON-BASELINE)"
 )
 async def delete_artifact(
