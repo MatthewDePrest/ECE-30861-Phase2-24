@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { toast } from "sonner"
 
-const BASE_URL = "http://52.23.239.59:8000"
+const BASE_URL = "https://q53b6eic4m.execute-api.us-east-1.amazonaws.com/prod"
 
 type ArtifactType = "model" | "dataset" | "code"
 
