@@ -1,2 +1,6 @@
-2025-12-11 13:14:35,879 - INFO - Installing project dependencies using C:\Users\anish\Downloads\ECE 30861\ECE-30861-Phase2-24\requirements.txt ...
-2025-12-11 13:14:37,202 - INFO - Installation completed successfully!
+2025-12-13 01:17:14,910 - INFO - Processing URLs from file: single_url.txt
+2025-12-13 01:17:17,268 - INFO - Read 1 lines from single_url.txt.
+2025-12-13 01:17:17,268 - INFO - Processing line 1: https://huggingface.co/google-bert/bert-base-uncased
+2025-12-13 01:17:17,982 - INFO - Cloning https://github.com/google-research/bert into C:\Users\anish\AppData\Local\Temp\code_quality_78tvi0x3\repo
+2025-12-13 01:17:28,824 - ERROR - Failed to upload to S3: Unable to locate credentials
+2025-12-13 01:17:28,824 - INFO - Processed 1 URL groups successfully out of 1 total lines.

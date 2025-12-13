@@ -36,11 +36,11 @@ router = APIRouter(tags=["Artifacts"])
 # In-memory storage for development (replace with DynamoDB later)
 ARTIFACT_STORE: Dict[str, Dict] = {}
 
-# USE_LOCAL = False
-# USE_AWS = True
+USE_LOCAL = False
+USE_AWS = True
 
-USE_LOCAL = True
-USE_AWS = False
+# USE_LOCAL = True
+# USE_AWS = False
 
 # Store for tokens (in-memory for simplicity)
 ACTIVE_TOKENS: Dict[str, Dict] = {}
