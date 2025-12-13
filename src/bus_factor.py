@@ -110,7 +110,7 @@ async def compute(
     normalized_files = math.log2(file_count + 1) if file_count > 0 else 0
 
     # Combine bus factor score with download and file metrics
-    combined_score = (bus_factor_score + normalized_downloads + normalized_files) / 2.5
+    combined_score = (bus_factor_score + normalized_downloads + normalized_files) / 3
 
     latency_ms = int((time.perf_counter() - start_time) * 1000)
     # logging.info(f"Computed bus factor = {combined_score:.2f} for {repo_id} in {latency_ms} ms")
