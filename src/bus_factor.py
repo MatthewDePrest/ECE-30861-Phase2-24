@@ -4,7 +4,7 @@ import time
 # import logging
 from typing import Optional, Tuple, Dict, TypeAlias
 from urllib.parse import urlparse
-from huggingface_hub import HfApi, hf_hub_download
+from huggingface_hub import HfApi
 
 BusFactorScore: TypeAlias = float
 LatencyMs: TypeAlias = int
@@ -17,8 +17,7 @@ async def compute(
     """
     Computes a 'bus factor' score for a Hugging Face repository.
     The bus factor estimates how resilient a project is to losing top contributors.
-    Additionally, it incorporates download counts and file counts as part of the metric.
-
+    
     Args:
         model_url: URL of the Hugging Face model repository
         code_url: (Optional) URL of associated source code repository
@@ -95,27 +94,10 @@ async def compute(
     max_entropy: float = math.log2(num_contributors)
     bus_factor_score: BusFactorScore = entropy / max_entropy if max_entropy > 0 else 0.0
 
-    # Fetch download count and file count
-    try:
-        model_info = await loop.run_in_executor(None, api.model_info, repo_id)
-        download_count = model_info.downloads
-        file_count = len(model_info.siblings)
-    except Exception as e:
-        # logging.error(f"Could not retrieve model info for {repo_id}: {e}")
-        download_count = 0
-        file_count = 0
-
-    # Normalize download count and file count
-    normalized_downloads = math.log2(download_count + 1) if download_count > 0 else 0
-    normalized_files = math.log2(file_count + 1) if file_count > 0 else 0
-
-    # Combine bus factor score with download and file metrics
-    combined_score = (bus_factor_score + normalized_downloads + normalized_files) / 3
-
     latency_ms = int((time.perf_counter() - start_time) * 1000)
-    # logging.info(f"Computed bus factor = {combined_score:.2f} for {repo_id} in {latency_ms} ms")
+    # logging.info(f"Computed bus factor = {bus_factor_score:.2f} for {repo_id} in {latency_ms} ms")
 
-    return combined_score, latency_ms
+    return bus_factor_score, latency_ms
 
 
 # Example use:
