@@ -20,4 +20,4 @@ python-dotenv>=1.0.0
 freezegun
 pytest-asyncio
 dotenv
-re
+selenium
