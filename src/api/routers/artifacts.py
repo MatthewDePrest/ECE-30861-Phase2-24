@@ -114,7 +114,9 @@ async def compute_metrics_from_url(url: str, artifact_type: ArtifactType) -> Mod
                 'desktop_pc': -1.0,
                 'aws_server': -1.0
             }),
-            size_score_latency=result.get('size_score_latency', 0.0)
+            size_score_latency=result.get('size_score_latency', 0.0),
+            reproducibility=result.get('reproducibility', -1.0),
+            reproducibility_latency=result.get('reproducibility_latency', 0.0)
         )
         
         return rating
