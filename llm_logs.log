@@ -1,6 +1,6 @@
-2025-12-13 01:36:08,963 - INFO - Processing URLs from file: single_url.txt
-2025-12-13 01:36:09,207 - INFO - Read 1 lines from single_url.txt.
-2025-12-13 01:36:09,207 - INFO - Processing line 1: https://huggingface.co/google-bert/bert-base-uncased
-2025-12-13 01:36:09,318 - INFO - Cloning https://github.com/google-research/bert into C:\Users\anish\AppData\Local\Temp\code_quality_p6jthz75\repo
-2025-12-13 01:36:15,689 - ERROR - Failed to upload to S3: Unable to locate credentials
-2025-12-13 01:36:15,689 - INFO - Processed 1 URL groups successfully out of 1 total lines.
+2025-12-13 02:08:13,566 - INFO - Processing URLs from file: single_url.txt
+2025-12-13 02:08:13,834 - INFO - Read 1 lines from single_url.txt.
+2025-12-13 02:08:13,834 - INFO - Processing line 1: https://huggingface.co/google-bert/bert-base-uncased
+2025-12-13 02:08:13,948 - INFO - Cloning https://github.com/google-research/bert into C:\Users\anish\AppData\Local\Temp\code_quality_07znm6bk\repo
+2025-12-13 02:08:25,728 - ERROR - Failed to upload to S3: Unable to locate credentials
+2025-12-13 02:08:25,728 - INFO - Processed 1 URL groups successfully out of 1 total lines.

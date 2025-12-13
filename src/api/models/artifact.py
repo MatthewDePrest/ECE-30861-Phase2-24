@@ -74,8 +74,8 @@ class ModelRating(BaseModel):
     # new fields for phase 2
     reproducibility: float  # 0, 0.5, or 1
     reproducibility_latency: float
-    # reviewedness: float  # Fraction of code from reviewed PRs, or -1
-    # reviewedness_latency: float
+    reviewedness: float  # Fraction of code from reviewed PRs, or -1
+    reviewedness_latency: float
     # tree_score: float  # Average score of parent models
     # tree_score_latency: float
 

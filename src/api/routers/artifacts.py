@@ -36,11 +36,11 @@ router = APIRouter(tags=["Artifacts"])
 # In-memory storage for development (replace with DynamoDB later)
 ARTIFACT_STORE: Dict[str, Dict] = {}
 
-USE_LOCAL = False
-USE_AWS = True
+# USE_LOCAL = False
+# USE_AWS = True
 
-# USE_LOCAL = True
-# USE_AWS = False
+USE_LOCAL = True
+USE_AWS = False
 
 # Store for tokens (in-memory for simplicity)
 ACTIVE_TOKENS: Dict[str, Dict] = {}
@@ -116,7 +116,9 @@ async def compute_metrics_from_url(url: str, artifact_type: ArtifactType) -> Mod
             }),
             size_score_latency=result.get('size_score_latency', 0.0),
             reproducibility=result.get('reproducibility', -1.0),
-            reproducibility_latency=result.get('reproducibility_latency', 0.0)
+            reproducibility_latency=result.get('reproducibility_latency', 0.0),
+            reviewedness=result.get('reviewedness', -1.0),
+            reviewedness_latency=result.get('reviewedness_latency', 0.0)
         )
         
         return rating

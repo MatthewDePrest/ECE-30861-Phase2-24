@@ -1,6 +1,6 @@
 import re
 import time
-from typing import Any, Dict, Final, Tuple, TypeAlias
+from typing import Any, Dict, Final, Tuple, TypeAlias, Optional
 
 import requests
 
@@ -9,7 +9,11 @@ LatencyMs: TypeAlias = int             # milliseconds
 ERROR_VALUE: Final[ReviewednessScore] = -1.0
 
 
-def compute_reviewedness(code_url: str) -> Tuple[ReviewednessScore, LatencyMs]:
+async def compute(
+    model_url: str,
+    code_url: Optional[str],
+    dataset_url: Optional[str],
+) -> Tuple[ReviewednessScore, LatencyMs]:
     """
     Compute the Reviewedness score for a GitHub repository.
 
@@ -111,7 +115,7 @@ def compute_reviewedness(code_url: str) -> Tuple[ReviewednessScore, LatencyMs]:
 # ------------------ Example usage ------------------
 # if __name__ == "__main__":
 #     test_repo = "https://github.com/google-research/bert"
-#     score, latency = compute_reviewedness(test_repo)
+#     score, latency = compute(test_repo)
 #     print(f"Reviewedness score: {score}")
 #     print(f"Computation time: {latency:.2f} ms")
 
@@ -135,5 +139,5 @@ def compute_reviewedness(code_url: str) -> Tuple[ReviewednessScore, LatencyMs]:
 #         latency = int((time.perf_counter() - start) * 1000)
 #         return ERROR_VALUE, latency
 #
-#     return compute_reviewedness(code_url)
+#     return compute(code_url)
 

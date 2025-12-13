@@ -18,6 +18,7 @@ from dataset_code_score import compute as dataset_and_code_score
 from dataset_quality import compute as dataset_quality
 from code_quality import compute as code_quality
 from reproducibility import compute as reproducibility
+from reviewedness import compute as reviewedness
 
 ERROR_VALUE = -1.0
 
@@ -54,6 +55,8 @@ class GradeResult(TypedDict):
     code_quality_latency: int
     reproducibility: float
     reproducibility_latency: int
+    reviewedness: float
+    reviewedness_latency: int
 
 
 # run tasks
@@ -85,6 +88,7 @@ async def run_metrics(urls: Dict[UrlCategory, str]) -> GradeResult:
         ("dataset_quality", dataset_quality, 1),
         ("dataset_and_code_score", dataset_and_code_score, 1),
         ("reproducibility", reproducibility, 1),
+        ("reviewedness", reviewedness, 1),
     ]
 
     # Build tasks and names in sync
@@ -162,6 +166,9 @@ async def run_metrics(urls: Dict[UrlCategory, str]) -> GradeResult:
     final_ordered_scores["code_quality_latency"] = metric_scores.get("code_quality_latency")
     final_ordered_scores["reproducibility"] = metric_scores.get("reproducibility")
     final_ordered_scores["reproducibility_latency"] = metric_scores.get("reproducibility_latency")
+    final_ordered_scores["reviewedness"] = metric_scores.get("reviewedness")
+    final_ordered_scores["reviewedness_latency"] = metric_scores.get("reviewedness_latency")
+
 
     # The final dictionary 'final_ordered_scores' now has the keys inserted 
     # in the desired order, satisfying the requirement.
