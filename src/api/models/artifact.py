@@ -76,8 +76,8 @@ class ModelRating(BaseModel):
     reproducibility_latency: float
     reviewedness: float  # Fraction of code from reviewed PRs, or -1
     reviewedness_latency: float
-    # tree_score: float  # Average score of parent models
-    # tree_score_latency: float
+    tree_score: float  # Average score of parent models
+    tree_score_latency: float
 
 # --- Additional Phase 2 Requirements ---
 class ArtifactCost(BaseModel):

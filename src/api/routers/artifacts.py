@@ -118,7 +118,9 @@ async def compute_metrics_from_url(url: str, artifact_type: ArtifactType) -> Mod
             reproducibility=result.get('reproducibility', -1.0),
             reproducibility_latency=result.get('reproducibility_latency', 0.0),
             reviewedness=result.get('reviewedness', -1.0),
-            reviewedness_latency=result.get('reviewedness_latency', 0.0)
+            reviewedness_latency=result.get('reviewedness_latency', 0.0),
+            tree_score=0.0,
+            tree_score_latency=0.0
         )
         
         return rating
