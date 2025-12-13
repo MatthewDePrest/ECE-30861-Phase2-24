@@ -36,11 +36,11 @@ router = APIRouter(tags=["Artifacts"])
 # In-memory storage for development (replace with DynamoDB later)
 ARTIFACT_STORE: Dict[str, Dict] = {}
 
-USE_LOCAL = False
-USE_AWS = True
+# USE_LOCAL = False
+# USE_AWS = True
 
-# USE_LOCAL = True
-# USE_AWS = False
+USE_LOCAL = True
+USE_AWS = False
 
 # Store for tokens (in-memory for simplicity)
 ACTIVE_TOKENS: Dict[str, Dict] = {}
@@ -551,7 +551,8 @@ async def get_artifacts_by_regex(
     # Validate regex
     import re
     try:
-        pattern = re.compile(artifact_regex.regex)
+        # pattern = re.compile(artifact_regex.regex)
+        pattern = re.compile(artifact_regex.regex, re.IGNORECASE)
     except re.error:
         raise HTTPException(status_code=400, detail="Invalid regular expression")
 
@@ -566,8 +567,8 @@ async def get_artifacts_by_regex(
         if pattern.search(a["name"])
     ]
 
-    if not matching:
-        raise HTTPException(status_code=404, detail="No artifact found under this regex")
+    # if not matching:
+    #     raise HTTPException(status_code=404, detail="No artifact found under this regex")
 
     return matching
 
