@@ -36,11 +36,11 @@ router = APIRouter(tags=["Artifacts"])
 # In-memory storage for development (replace with DynamoDB later)
 ARTIFACT_STORE: Dict[str, Dict] = {}
 
-USE_LOCAL = False
-USE_AWS = True
+# USE_LOCAL = False
+# USE_AWS = True
 
-# USE_LOCAL = True
-# USE_AWS = False
+USE_LOCAL = True
+USE_AWS = False
 
 # Store for tokens (in-memory for simplicity)
 ACTIVE_TOKENS: Dict[str, Dict] = {}
@@ -114,7 +114,13 @@ async def compute_metrics_from_url(url: str, artifact_type: ArtifactType) -> Mod
                 'desktop_pc': -1.0,
                 'aws_server': -1.0
             }),
-            size_score_latency=result.get('size_score_latency', 0.0)
+            size_score_latency=result.get('size_score_latency', 0.0),
+            reproducibility=result.get('reproducibility', -1.0),
+            reproducibility_latency=result.get('reproducibility_latency', 0.0),
+            reviewedness=result.get('reviewedness', -1.0),
+            reviewedness_latency=result.get('reviewedness_latency', 0.0),
+            tree_score=0.0,
+            tree_score_latency=0.0
         )
         
         return rating
@@ -551,7 +557,8 @@ async def get_artifacts_by_regex(
     # Validate regex
     import re
     try:
-        pattern = re.compile(artifact_regex.regex)
+        # pattern = re.compile(artifact_regex.regex)
+        pattern = re.compile(artifact_regex.regex, re.IGNORECASE)
     except re.error:
         raise HTTPException(status_code=400, detail="Invalid regular expression")
 
@@ -566,8 +573,8 @@ async def get_artifacts_by_regex(
         if pattern.search(a["name"])
     ]
 
-    if not matching:
-        raise HTTPException(status_code=404, detail="No artifact found under this regex")
+    # if not matching:
+    #     raise HTTPException(status_code=404, detail="No artifact found under this regex")
 
     return matching
 
