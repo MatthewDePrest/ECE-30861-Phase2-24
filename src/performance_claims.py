@@ -104,8 +104,8 @@ def evaluate_performance_claims(readme_text: str) -> PerformanceScores:
     Use Purdue GenAI to evaluate the README text for performance scoring.
 
     Heuristic (as described in the system prompt):
-      - presence (35%): 1 if any numeric benchmark claims; else 0.
-      - detail (25%): clarity/coverage of dataset/task/split/metric/value.
+      - presence (30%): 1 if any numeric benchmark claims; else 0.
+      - detail (30%): clarity/coverage of dataset/task/split/metric/value.
       - evidence (20%): strength of supporting material.
       - confirmation (20%): authoritative links or model-index corroboration.
 
@@ -140,8 +140,8 @@ def evaluate_performance_claims(readme_text: str) -> PerformanceScores:
                     "Given the README text of a Hugging Face model, evaluate its benchmark claims "
                     "using the rubric below and return a JSON object with subscores and a final score."
                     "\n\nRubric:\n"
-                    "- presence (35%): 1 if any numeric benchmark claims (README or model-index); else 0.\n"
-                    "- detail (25%): scale by clarity/coverage of dataset/task/split/metric/value.\n"
+                    "- presence (30%): 1 if any numeric benchmark claims (README or model-index); else 0.\n"
+                    "- detail (30%): scale by clarity/coverage of dataset/task/split/metric/value.\n"
                     "- evidence (20%): strength of supporting material.\n"
                     "- confirmation (20%): authoritative links or model-index corroboration.\n\n"
                     "Respond ONLY with JSON in the format:\n"
@@ -192,7 +192,7 @@ def evaluate_performance_claims(readme_text: str) -> PerformanceScores:
             content = content.strip()
             # Remove optional "json" language tag
             if content.lower().startswith("json"):
-                content = content[4:].trip()
+                content = content[4:].strip()
 
         # The prompt uses single quotes in the example; JSON requires double quotes.
         # If needed, you can make this more robust, but this basic normalization
@@ -215,8 +215,8 @@ def evaluate_performance_claims(readme_text: str) -> PerformanceScores:
 
         # Compute final_score using the rubric
         scores["final_score"] = round(
-            0.35 * scores["presence"]
-            + 0.25 * scores["detail"]
+            0.30 * scores["presence"]
+            + 0.30 * scores["detail"]
             + 0.20 * scores["evidence"]
             + 0.20 * scores["confirmation"],
             2,
