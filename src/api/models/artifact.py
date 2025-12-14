@@ -15,6 +15,7 @@ class ArtifactType(str, Enum):
 class ArtifactData(BaseModel):
     """Source location for ingesting an artifact."""
     url: HttpUrl = Field(..., description="Artifact source url used during ingest.")
+    name: Optional[str] = None
     download_url: Optional[HttpUrl] = Field(None, description="Direct download link served by your server")
 
 class ArtifactReturnURL(BaseModel):

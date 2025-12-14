@@ -213,9 +213,9 @@ async def create_artifact(
     For models, computes trustworthiness metrics and checks threshold (0.5).
     """
     url_str = str(artifact_data.url)
-    
-    # Extract name from URL
-    artifact_name = extract_name_from_url(url_str)
+
+    # Use provided name if available, otherwise extract from URL
+    artifact_name = artifact_data.name if artifact_data.name else extract_name_from_url(url_str)
     
     # local implementation to check duplicates
     if (USE_LOCAL):
