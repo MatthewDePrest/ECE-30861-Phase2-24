@@ -539,59 +539,26 @@ async def get_artifacts_by_regex(
     Search artifacts by regex against their names.
     """
     import re
-    import signal
-    from contextlib import contextmanager
-    
-    # Timeout handler for regex operations
-    @contextmanager
-    def timeout(seconds):
-        def timeout_handler(signum, frame):
-            raise TimeoutError("Regex operation timed out")
-        
-        # Set the signal handler and alarm
-        original_handler = signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(seconds)
-        try:
-            yield
-        finally:
-            signal.alarm(0)
-            signal.signal(signal.SIGALRM, original_handler)
     
     # Validate regex is not empty or None
     if not artifact_regex.regex:
         raise HTTPException(status_code=400, detail="Invalid regular expression")
     
-    # Check for potentially malicious patterns
-    dangerous_patterns = [
-        r'(.+)+',           # Catastrophic backtracking
-        r'(.*)*',           # Nested quantifiers
-        r'(a+)+',           # Repeated groups with quantifiers
-        r'(a*)*',
-        r'(a+)+b',
-        r'(x+x+)+y',
-    ]
-    
-    # Simple heuristic check for dangerous patterns
     regex_str = artifact_regex.regex
-    if any(pattern in regex_str for pattern in ['(.*)*', '(.+)+', '(a+)+']):
+    
+    # Limit regex length to prevent DoS
+    if len(regex_str) > 200:
         raise HTTPException(status_code=400, detail="Invalid regular expression")
     
-    # Limit regex length
-    if len(regex_str) > 500:
-        raise HTTPException(status_code=400, detail="Invalid regular expression")
-    
-    # Validate and compile regex with timeout protection
+    # Validate and compile regex
     try:
-        with timeout(2):  # 2 second timeout for compilation
-            pattern = re.compile(regex_str)  # CASE-SENSITIVE (removed re.IGNORECASE)
-    except TimeoutError:
-        raise HTTPException(status_code=400, detail="Invalid regular expression")
+        pattern = re.compile(regex_str)
     except re.error:
         raise HTTPException(status_code=400, detail="Invalid regular expression")
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid regular expression")
 
-    # Retrieve artifacts depending on mode
+    # Retrieve artifacts
     if USE_LOCAL:
         artifacts = [
             {
@@ -604,29 +571,28 @@ async def get_artifacts_by_regex(
     elif USE_AWS:
         try:
             artifacts, _ = await db_service.list_artifacts(limit=1000)
-        except Exception as e:
+        except Exception:
             raise HTTPException(status_code=500, detail="Internal server error")
     else:
         raise HTTPException(status_code=500, detail="Server misconfiguration")
 
-    # Filter by regex with timeout protection
+    # Filter by regex
     matching = []
-    try:
-        with timeout(5):  # 5 second timeout for matching all artifacts
-            for a in artifacts:
-                try:
-                    if pattern.search(a["name"]):
-                        matching.append(
-                            ArtifactMetadata(
-                                id=str(a["id"]),
-                                name=a["name"],
-                                type=a["type"]
-                            )
-                        )
-                except Exception:
-                    continue  # Skip problematic artifacts
-    except TimeoutError:
-        raise HTTPException(status_code=400, detail="Invalid regular expression")
+    for a in artifacts:
+        try:
+            # Use match() for full string match OR search() for substring match
+            # Based on the spec example, search() seems more appropriate
+            if pattern.search(a["name"]):
+                matching.append(
+                    ArtifactMetadata(
+                        id=str(a["id"]),
+                        name=a["name"],
+                        type=a["type"]
+                    )
+                )
+        except Exception:
+            # Skip if regex causes issues on this specific name
+            continue
 
     # Return 404 if no matches found
     if not matching:
