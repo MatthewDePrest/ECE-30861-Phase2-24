@@ -235,10 +235,10 @@ def evaluate_performance_claims(readme_text: str) -> PerformanceScores:
 
         # Compute final_score using the rubric
         scores["final_score"] = round(
-            0.30 * scores["presence"]
-            + 0.30 * scores["detail"]
-            + 0.20 * scores["evidence"]
-            + 0.20 * scores["confirmation"],
+            0.35 * scores["presence"]
+            + 0.35 * scores["detail"]
+            + 0.15 * scores["evidence"]
+            + 0.15 * scores["confirmation"],
             2,
         )
 
