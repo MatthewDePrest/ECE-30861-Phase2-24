@@ -196,7 +196,6 @@ async def authenticate():
         detail="This system does not support authentication"
     )
 
-
 @router.post(
     "/artifact/byRegEx",
     response_model=List[ArtifactMetadata],
@@ -210,6 +209,7 @@ async def get_artifacts_by_regex(
     Search artifacts by regex against their names.
     """
     import re
+    import asyncio
     
     # Validate regex is not empty or None
     if not artifact_regex.regex:
@@ -221,9 +221,30 @@ async def get_artifacts_by_regex(
     if len(regex_str) > 200:
         raise HTTPException(status_code=400, detail="Invalid regular expression")
     
-    # Validate and compile regex
+    # Check for obviously dangerous patterns
+    dangerous_substrings = [
+        '(.+)+',
+        '(.*)*', 
+        '(a+)+',
+        '(a*)*',
+        '(x+)+',
+        '{100,}',
+        '{1000,}'
+    ]
+    
+    for dangerous in dangerous_substrings:
+        if dangerous in regex_str:
+            raise HTTPException(status_code=400, detail="Invalid regular expression")
+    
+    # Validate and compile regex with timeout
     try:
-        pattern = re.compile(regex_str)
+        # Use asyncio.wait_for for async timeout
+        pattern = await asyncio.wait_for(
+            asyncio.to_thread(re.compile, regex_str),
+            timeout=1.0  # 1 second timeout for compilation
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=400, detail="Invalid regular expression")
     except re.error:
         raise HTTPException(status_code=400, detail="Invalid regular expression")
     except Exception:
@@ -247,28 +268,46 @@ async def get_artifacts_by_regex(
     else:
         raise HTTPException(status_code=500, detail="Server misconfiguration")
 
-    # Filter by regex
-    matching = []
-    for a in artifacts:
-        try:
-            # Use match() for full string match OR search() for substring match
-            # Based on the spec example, search() seems more appropriate
-            if pattern.search(a["name"]):
-                # Ensure type is converted properly
-                artifact_type = a["type"]
-                if isinstance(artifact_type, str):
-                    artifact_type = ArtifactType(artifact_type)
-
-                matching.append(
-                    ArtifactMetadata(
-                        id=str(a["id"]),
-                        name=a["name"],
-                        type=artifact_type
-                    )
+    # Filter by regex with timeout
+    async def search_with_timeout():
+        matching = []
+        for a in artifacts:
+            try:
+                # Run each regex search with timeout
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(pattern.search, a["name"]),
+                    timeout=0.1  # 100ms per artifact
                 )
-        except Exception:
-            # Skip if regex causes issues on this specific name
-            continue
+                
+                if result:
+                    # Ensure type is converted properly
+                    artifact_type = a["type"]
+                    if isinstance(artifact_type, str):
+                        artifact_type = ArtifactType(artifact_type)
+                    
+                    matching.append(
+                        ArtifactMetadata(
+                            id=str(a["id"]),
+                            name=a["name"],
+                            type=artifact_type
+                        )
+                    )
+            except asyncio.TimeoutError:
+                # Skip this artifact if regex times out
+                continue
+            except Exception:
+                # Skip problematic artifacts
+                continue
+        return matching
+    
+    try:
+        # Overall timeout for entire search operation
+        matching = await asyncio.wait_for(
+            search_with_timeout(),
+            timeout=5.0  # 5 second total timeout
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=400, detail="Invalid regular expression")
 
     # Return 404 if no matches found
     if not matching:
