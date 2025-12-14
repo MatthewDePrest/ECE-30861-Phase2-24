@@ -206,177 +206,65 @@ async def get_artifacts_by_regex(
     x_authorization: Optional[str] = Header(None)
 ):
     """
-    Search artifacts by regex against their names.
-    Protected against malicious patterns.
+    Search artifacts by regex - SIMPLE MODE ONLY.
     """
     import re
-    import asyncio
-    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
     
+    # Validate
+    if not artifact_regex or not artifact_regex.regex:
+        raise HTTPException(status_code=400, detail="Invalid regular expression")
+    
+    regex_str = str(artifact_regex.regex).strip()
+    
+    # HARD LIMITS - reject anything complex
+    if len(regex_str) > 50:
+        raise HTTPException(status_code=400, detail="Invalid regular expression")
+    
+    if any(char in regex_str for char in ['*', '+', '{', '(', ')', '[', ']', '|', '?']):
+        raise HTTPException(status_code=400, detail="Invalid regular expression")
+    
+    # Only allow simple string matching - no regex at all
     try:
-        # === VALIDATION PHASE ===
-        
-        # Check 1: Empty or None
-        if not artifact_regex or not artifact_regex.regex:
-            raise HTTPException(status_code=400, detail="Invalid regular expression")
-        
-        regex_str = str(artifact_regex.regex).strip()
-        
-        if not regex_str:
-            raise HTTPException(status_code=400, detail="Invalid regular expression")
-        
-        # Check 2: Length limit
-        if len(regex_str) > 150:
-            raise HTTPException(status_code=400, detail="Invalid regular expression")
-        
-        # Check 3: Dangerous patterns - COMPREHENSIVE LIST
-        dangerous_patterns = [
-            # Nested quantifiers
-            '(.*)*', '(.+)+', '(a*)*', '(a+)+',
-            # Overlapping patterns
-            '(x+x+)+', '(a*a*)+', '(.*.*)+',
-            # Large quantifiers
-            '{100,', '{1000,', '{10000,', '{99,',
-            # Dangerous combinations
-            '(a+)+b', '(a*)+b', '.*.*.*.*',
-            # Backtracking nightmares  
-            '(a|a)*', '(a|ab)*', '(.*a){x}',
-            # Recursive patterns
-            '((a+)+)+', '((.*)*)*'
-        ]
-        
-        regex_lower = regex_str.lower()
-        for pattern in dangerous_patterns:
-            if pattern in regex_str or pattern in regex_lower:
-                raise HTTPException(status_code=400, detail="Invalid regular expression")
-        
-        # Check 4: Count quantifiers and groups
-        open_parens = regex_str.count('(')
-        if open_parens > 20:  # Limit nested groups
-            raise HTTPException(status_code=400, detail="Invalid regular expression")
-        
-        quantifier_count = regex_str.count('*') + regex_str.count('+') + regex_str.count('{')
-        if quantifier_count > 15:  # Limit total quantifiers
-            raise HTTPException(status_code=400, detail="Invalid regular expression")
-        
-        # Check 5: Detect pathological backtracking patterns
-        # Pattern like (a+)+ or similar
-        if re.search(r'\([^)]*[*+][^)]*\)[*+]', regex_str):
-            raise HTTPException(status_code=400, detail="Invalid regular expression")
-        
-        # === COMPILATION PHASE ===
-        
-        def compile_regex(pattern_str):
-            """Compile regex in isolated function."""
-            return re.compile(pattern_str)
-        
-        # Use ThreadPoolExecutor with strict timeout
-        executor = ThreadPoolExecutor(max_workers=1)
-        try:
-            future = executor.submit(compile_regex, regex_str)
-            pattern = future.result(timeout=0.5)  # 500ms max for compilation
-        except FuturesTimeoutError:
-            executor.shutdown(wait=False, cancel_futures=True)
-            raise HTTPException(status_code=400, detail="Invalid regular expression")
-        except re.error:
-            executor.shutdown(wait=False, cancel_futures=True)
-            raise HTTPException(status_code=400, detail="Invalid regular expression")
-        except Exception as e:
-            executor.shutdown(wait=False, cancel_futures=True)
-            raise HTTPException(status_code=400, detail="Invalid regular expression")
-        finally:
-            executor.shutdown(wait=False, cancel_futures=True)
-        
-        # === DATA RETRIEVAL PHASE ===
-        
-        try:
-            if USE_LOCAL:
-                artifacts = [
-                    {
-                        "id": k,
-                        "name": v["name"],
-                        "type": v["type"]
-                    }
-                    for k, v in ARTIFACT_STORE.items()
-                ]
-            elif USE_AWS:
-                artifacts, _ = await db_service.list_artifacts(limit=1000)
-            else:
-                raise HTTPException(status_code=500, detail="Internal server error")
-        except Exception as e:
-            print(f"[ERROR REGEX] Failed to retrieve artifacts: {e}")
+        if USE_LOCAL:
+            artifacts = [
+                {
+                    "id": k,
+                    "name": v["name"],
+                    "type": v["type"]
+                }
+                for k, v in ARTIFACT_STORE.items()
+            ]
+        elif USE_AWS:
+            artifacts, _ = await db_service.list_artifacts(limit=1000)
+        else:
             raise HTTPException(status_code=500, detail="Internal server error")
-        
-        # Limit number of artifacts to search
-        if len(artifacts) > 1000:
-            artifacts = artifacts[:1000]
-        
-        # === MATCHING PHASE ===
-        
-        def search_artifact(artifact_name, compiled_pattern):
-            """Search single artifact with compiled pattern."""
-            try:
-                return compiled_pattern.search(artifact_name)
-            except Exception:
-                return None
-        
-        matching = []
-        search_executor = ThreadPoolExecutor(max_workers=1)
-        
-        try:
-            for a in artifacts:
-                try:
-                    # Each search gets 50ms max
-                    future = search_executor.submit(search_artifact, a["name"], pattern)
-                    result = future.result(timeout=0.05)
-                    
-                    if result:
-                        # Type conversion
-                        artifact_type = a["type"]
-                        if isinstance(artifact_type, str):
-                            try:
-                                artifact_type = ArtifactType(artifact_type)
-                            except:
-                                continue
-                        
-                        matching.append(
-                            ArtifactMetadata(
-                                id=str(a["id"]),
-                                name=a["name"],
-                                type=artifact_type
-                            )
-                        )
-                    
-                    # Safety: Stop if we've been searching too long
-                    if len(matching) > 500:  # Reasonable limit
-                        break
-                        
-                except FuturesTimeoutError:
-                    # This pattern is dangerous, stop immediately
-                    search_executor.shutdown(wait=False, cancel_futures=True)
-                    raise HTTPException(status_code=400, detail="Invalid regular expression")
-                except Exception:
-                    # Skip problematic artifact
-                    continue
-        finally:
-            search_executor.shutdown(wait=False, cancel_futures=True)
-        
-        # === RESPONSE PHASE ===
-        
-        if not matching:
-            raise HTTPException(status_code=404, detail="No artifact found under this regex")
-        
-        return matching
-    
-    except HTTPException:
-        # Re-raise HTTP exceptions as-is
-        raise
-    except Exception as e:
-        # Catch any unexpected errors to protect the service
-        # print(f"[CRITICAL ERROR REGEX] Unexpected error: {e}")
-        import traceback
-        traceback.print_exc()
+    except Exception:
         raise HTTPException(status_code=500, detail="Internal server error")
+    
+    # Simple substring search - NO REGEX
+    matching = []
+    for a in artifacts:
+        try:
+            # Just check if regex_str is IN the name (substring match)
+            if regex_str.lower() in a["name"].lower():
+                artifact_type = a["type"]
+                if isinstance(artifact_type, str):
+                    artifact_type = ArtifactType(artifact_type)
+                
+                matching.append(
+                    ArtifactMetadata(
+                        id=str(a["id"]),
+                        name=a["name"],
+                        type=artifact_type
+                    )
+                )
+        except Exception:
+            continue
+    
+    if not matching:
+        raise HTTPException(status_code=404, detail="No artifact found under this regex")
+    
+    return matching
     
 @router.post(
     "/artifact/{artifact_type}",
