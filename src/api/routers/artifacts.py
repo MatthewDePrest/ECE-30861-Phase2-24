@@ -527,7 +527,7 @@ async def rate_model(
     return ModelRating(**rating_data)
 
 @router.post(
-    "/artifact/search/byRegEx",
+    "/artifact/byRegEx",
     response_model=List[ArtifactMetadata],
     summary="Get any artifacts fitting the regular expression (BASELINE)"
 )
@@ -538,6 +538,58 @@ async def get_artifacts_by_regex(
     """
     Search artifacts by regex against their names.
     """
+    import re
+    import signal
+    from contextlib import contextmanager
+    
+    # Timeout handler for regex operations
+    @contextmanager
+    def timeout(seconds):
+        def timeout_handler(signum, frame):
+            raise TimeoutError("Regex operation timed out")
+        
+        # Set the signal handler and alarm
+        original_handler = signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(seconds)
+        try:
+            yield
+        finally:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, original_handler)
+    
+    # Validate regex is not empty or None
+    if not artifact_regex.regex:
+        raise HTTPException(status_code=400, detail="Invalid regular expression")
+    
+    # Check for potentially malicious patterns
+    dangerous_patterns = [
+        r'(.+)+',           # Catastrophic backtracking
+        r'(.*)*',           # Nested quantifiers
+        r'(a+)+',           # Repeated groups with quantifiers
+        r'(a*)*',
+        r'(a+)+b',
+        r'(x+x+)+y',
+    ]
+    
+    # Simple heuristic check for dangerous patterns
+    regex_str = artifact_regex.regex
+    if any(pattern in regex_str for pattern in ['(.*)*', '(.+)+', '(a+)+']):
+        raise HTTPException(status_code=400, detail="Invalid regular expression")
+    
+    # Limit regex length
+    if len(regex_str) > 500:
+        raise HTTPException(status_code=400, detail="Invalid regular expression")
+    
+    # Validate and compile regex with timeout protection
+    try:
+        with timeout(2):  # 2 second timeout for compilation
+            pattern = re.compile(regex_str)  # CASE-SENSITIVE (removed re.IGNORECASE)
+    except TimeoutError:
+        raise HTTPException(status_code=400, detail="Invalid regular expression")
+    except re.error:
+        raise HTTPException(status_code=400, detail="Invalid regular expression")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid regular expression")
 
     # Retrieve artifacts depending on mode
     if USE_LOCAL:
@@ -550,31 +602,35 @@ async def get_artifacts_by_regex(
             for k, v in ARTIFACT_STORE.items()
         ]
     elif USE_AWS:
-        artifacts, _ = await db_service.list_artifacts(limit=1000)
+        try:
+            artifacts, _ = await db_service.list_artifacts(limit=1000)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail="Internal server error")
     else:
         raise HTTPException(status_code=500, detail="Server misconfiguration")
 
-    # Validate regex
-    import re
+    # Filter by regex with timeout protection
+    matching = []
     try:
-        # pattern = re.compile(artifact_regex.regex)
-        pattern = re.compile(artifact_regex.regex, re.IGNORECASE)
-    except re.error:
+        with timeout(5):  # 5 second timeout for matching all artifacts
+            for a in artifacts:
+                try:
+                    if pattern.search(a["name"]):
+                        matching.append(
+                            ArtifactMetadata(
+                                id=str(a["id"]),
+                                name=a["name"],
+                                type=a["type"]
+                            )
+                        )
+                except Exception:
+                    continue  # Skip problematic artifacts
+    except TimeoutError:
         raise HTTPException(status_code=400, detail="Invalid regular expression")
 
-    # Filter by regex
-    matching = [
-        ArtifactMetadata(
-            id=str(a["id"]),
-            name=a["name"],
-            type=a["type"]
-        )
-        for a in artifacts
-        if pattern.search(a["name"])
-    ]
-
-    # if not matching:
-    #     raise HTTPException(status_code=404, detail="No artifact found under this regex")
+    # Return 404 if no matches found
+    if not matching:
+        raise HTTPException(status_code=404, detail="No artifact found under this regex")
 
     return matching
 
