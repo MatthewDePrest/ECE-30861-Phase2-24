@@ -162,7 +162,7 @@ def evaluate_performance_claims(readme_text: str) -> PerformanceScores:
                     "- 0.3: Self-reported without external validation\n"
                     "- 0.0: No way to verify claims\n\n"
                     "Calculate final score as weighted average:\n"
-                    "final_score = (0.30 × presence) + (0.30 × detail) + (0.20 × evidence) + (0.20 × confirmation)\n\n"
+                    "final_score = (0.35 × presence) + (0.35 × detail) + (0.15 × evidence) + (0.15 × confirmation)\n\n"
                     "CRITICAL: Respond ONLY with the final_score as a single number between 0.0 and 1.0.\n"
                     "Examples of valid responses: 0.8, 0.65, 0.0, 1.0\n"
                     "Do NOT include explanations, subscores, or any other text."
