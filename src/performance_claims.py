@@ -104,10 +104,10 @@ def evaluate_performance_claims(readme_text: str) -> PerformanceScores:
     Use Purdue GenAI to evaluate the README text for performance scoring.
 
     Heuristic (as described in the system prompt):
-      - presence (45%): 1 if any numeric benchmark claims; else 0.
-      - detail (15%): clarity/coverage of dataset/task/split/metric/value.
-      - evidence (10%): strength of supporting material.
-      - confirmation (30%): authoritative links or model-index corroboration.
+      - presence (40%): 1 if any numeric benchmark claims; else 0.
+      - detail (20%): clarity/coverage of dataset/task/split/metric/value.
+      - evidence (15%): strength of supporting material.
+      - confirmation (25%): authoritative links or model-index corroboration.
 
     The model is expected to return a JSON object with numeric subscores
     and a final_score. If subscores are > 1, they are interpreted as
@@ -140,10 +140,10 @@ def evaluate_performance_claims(readme_text: str) -> PerformanceScores:
                     "Given the README text of a Hugging Face model, evaluate its benchmark claims "
                     "using the rubric below and return a JSON object with subscores and a final score."
                     "\n\nRubric:\n"
-                    "- presence (45%): 1 if any numeric benchmark claims (README or model-index); else 0.\n"
-                    "- detail (15%): scale by clarity/coverage of dataset/task/split/metric/value.\n"
-                    "- evidence (10%): strength of supporting material.\n"
-                    "- confirmation (30%): authoritative links or model-index corroboration.\n\n"
+                    "- presence (40%): 1 if any numeric benchmark claims (README or model-index); else 0.\n"
+                    "- detail (20%): scale by clarity/coverage of dataset/task/split/metric/value.\n"
+                    "- evidence (15%): strength of supporting material.\n"
+                    "- confirmation (25%): authoritative links or model-index corroboration.\n\n"
                     "Respond ONLY with JSON in the format:\n"
                     "{'presence': float, 'detail': float, 'evidence': float, 'confirmation': float, 'final_score': float}"
                 ),
@@ -215,10 +215,10 @@ def evaluate_performance_claims(readme_text: str) -> PerformanceScores:
 
         # Compute final_score using the rubric
         scores["final_score"] = round(
-            0.45 * scores["presence"]
-            + 0.15 * scores["detail"]
-            + 0.10 * scores["evidence"]
-            + 0.30 * scores["confirmation"],
+            0.40 * scores["presence"]
+            + 0.20 * scores["detail"]
+            + 0.15 * scores["evidence"]
+            + 0.25 * scores["confirmation"],
             2,
         )
 
