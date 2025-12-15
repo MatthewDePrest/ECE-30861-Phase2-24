@@ -291,7 +291,7 @@ export default function DashboardPage() {
                           <Eye className="h-4 w-4" />
                         </Button>
 
-                        <Button
+                        {/* <Button
                           variant="ghost"
                           size="sm"
                           aria-label="Edit artifact"
@@ -301,7 +301,7 @@ export default function DashboardPage() {
                           }}
                         >
                           <Pencil className="h-4 w-4" />
-                        </Button>
+                        </Button> */}
 
                         <Button 
                           variant="ghost"
