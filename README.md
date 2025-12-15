@@ -24,15 +24,13 @@ ECE-30861-Phase2-24/
 ├── frontend/                    # React + TypeScript + Vite frontend
 │   ├── src/
 │   │   ├── app/               # Theme and query client setup
-│   │   ├── api/               # Axios client and registry service functions
+│   │   ├── api/               # FastAPI client and registry service functions
 │   │   ├── components/        # Reusable UI components
-│   │   ├── pages/             # Dashboard and feature panels
-│   │   └── main.tsx
-│   ├── tests/selenium/        # Smoke and accessibility tests
+│   │   └── page.tsx
 │   ├── package.json
-│   └── vite.config.ts
-└── src/                        # Python backend implementation
-    ├── ...                     # CLI and API implementation
+├── src/                        # Python backend implementation
+    ├── api/                    # FastAPI endpoints
+    ├── ...                     # Metric implementations
 ```
 
 ## Quick Start
@@ -43,11 +41,13 @@ ECE-30861-Phase2-24/
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the CLI
-python -m src.cli [options]
+# IF USING CLI: Run the CLI
+./run [command]
 
-# Or start the API server
-python -m src.server
+# IF RUNNING API SERVICE
+cd src
+python -m uvicorn api.main:app --reload
+
 ```
 
 ### Frontend
@@ -62,19 +62,34 @@ npm install
 npm run dev
 ```
 
-The frontend will open at `http://localhost:5173`.
+The frontend will open at `http://localhost:3000`.
 
 ## Key Features
+
+### CI/CD Pipeline (Grading Criterion)
+**Features:**
+- Implemented with Github Actions
+- Python linting and unit tests via pytest
+- Automatic execution on pull requests and pushes to main
+- Package FastAPI backend
+- Deploy to AWS EC2 using SSH and environment secrets
+- Deploy frontend to Vercel (automatic)
+
+Relevant file:
+```.github/workflows/deploy.yml```
+
+### LLM Integration
+
+- Used throughout development (Copilot, ChatGPT, CLAUDE, etc...)
+- Used to analyze READMEs in ```src/performance_claims.py```
 
 ### CLI Features
 - Evaluate models from HuggingFace
 - Analyze datasets for quality and size
 - Inspect GitHub repositories for code metrics
 - Score artifacts against multiple criteria
-- Output results in various formats
 
 ### Frontend Features
-- **Authentication**: Secure login for artifact management
 - **Artifact CRUD**: Create, read, update, and delete models, datasets, and code artifacts
 - **Search**: Find artifacts by name or regex pattern
 - **Analysis Tools**:
@@ -82,7 +97,6 @@ The frontend will open at `http://localhost:5173`.
   - Cost analysis with dependency tracking
   - Lineage visualization
   - License compliance checking
-- **Admin Panel**: Registry management and system health monitoring
 - **Health Monitoring**: Real-time component status and system metrics
 
 ### API Endpoints
@@ -104,37 +118,9 @@ Core endpoints provided by the backend:
 - `GET /tracks` – List planned feature tracks
 - `DELETE /reset` – Reset registry (admin only)
 
-## Configuration
-
-### Frontend (.env)
-
-Set the backend API URL:
-
-```
-VITE_API_URL=http://ec2-52-23-239-59.compute-1.amazonaws.com
-```
-
-Or use the default localhost during development.
-
-### Backend
-
-See `src/` directory for configuration options and environment variables.
-
 ## Testing
 
-### Frontend Tests
-
-```powershell
-cd frontend
-
-# Run smoke tests (UI functionality)
-npm run test:ui
-
-# Run accessibility audit (WCAG 2.1 AA)
-npm run test:a11y
-```
-
-### Backend Tests
+### Frontend and Backend Tests
 
 ```bash
 # Run unit tests
@@ -153,75 +139,21 @@ pytest --cov=src tests/
 - **npm** or **yarn** (frontend package manager)
 - **Chrome/Chromedriver** (for frontend tests)
 
-### Building for Production
-
-**Frontend:**
-
-```powershell
-cd frontend
-npm run build
-npm run preview
-```
-
-**Backend:**
-
-Refer to backend documentation in `src/` for build and deployment instructions.
-
 ## Architecture
 
 ### Frontend Architecture
 
 - **State Management**: React Query for server state
 - **HTTP Client**: Axios with automatic authorization header injection
-- **UI Framework**: Material-UI (MUI)
+- **UI Framework**: Material-UI (MUI) with custom dark theme
 - **Build Tool**: Vite
 - **Authentication**: Token-based (localStorage)
 
 ### Backend Architecture
 
-- **Framework**: Python (Flask or FastAPI)
+- **Framework**: Python (FastAPI)
 - **API Spec**: OpenAPI 3.0.2
-- **Database**: See backend docs
-- **Authentication**: Token-based with X-Authorization header
-
-## Troubleshooting
-
-### Frontend Issues
-
-**"Cannot find module" errors in Vite:**
-- Check relative import paths. Panel components in `src/pages/panels/` must import API with `../../api/`
-
-**"Failed to reach backend":**
-- Verify `VITE_API_URL` in `.env` or environment variables
-- Ensure backend server is running and accessible
-
-**"Token not being sent to API":**
-- Check browser DevTools Network tab; verify `X-Authorization` header is present
-- Ensure token is stored in `localStorage` under key `token`
-
-**"Frontend folder not visible in explorer":**
-- Open the repo root folder (`ECE-30861-Phase2-24`) in VS Code, not a subdirectory
-
-### Backend Issues
-
-Refer to backend documentation in the `src/` directory.
-
-## Design & UX
-
-- **Dark Theme**: Blue primary color (#1E4ED8) with dark backgrounds (#0B1020, #131A2A)
-- **Components**: Rounded cards, soft shadows, pill-shaped buttons
-- **Accessibility**: WCAG 2.1 AA compliant with visible focus styles, skip link, and aria-live regions
-- **Responsive**: Mobile-friendly layout with MUI Grid system
-
-## Metrics Explained
-
-The registry evaluates artifacts on several dimensions:
-
-- **Model Size Score**: Smaller, more efficient models score higher
-- **License Compliance**: Artifacts with clear, permissive licenses score higher
-- **Cost Analysis**: Quantifies standalone vs. total cost including dependencies
-- **Lineage**: Traces upstream dependencies and data provenance
-- **Health**: Continuous monitoring of availability and component status
+- **Database**: Amazon DynamoDB
 
 ## Contributing
 
