@@ -1,6 +1,6 @@
 import re
 import time
-from typing import Any, Dict, List, Tuple, TypeAlias
+from typing import Any, Dict, List, Tuple, TypeAlias, Optional
 
 import requests
 
@@ -8,7 +8,11 @@ ReproducibilityScore: TypeAlias = float  # 0.0–1.0
 LatencyMs: TypeAlias = int               # milliseconds
 
 
-def compute_reproducibility(model_url: str) -> Tuple[ReproducibilityScore, LatencyMs]:
+async def compute(
+    model_url: str,
+    code_url: Optional[str],
+    dataset_url: Optional[str],
+) -> Tuple[ReproducibilityScore, LatencyMs]:
     """
     Compute a simple reproducibility score for a Hugging Face model.
 
@@ -100,6 +104,6 @@ def compute_reproducibility(model_url: str) -> Tuple[ReproducibilityScore, Laten
 # ------------------ Example usage ------------------
 # if __name__ == "__main__":
 #     test_url = "https://huggingface.co/google-bert/bert-base-uncased"
-#     score, latency = compute_reproducibility(test_url)
+#     score, latency = compute(test_url)
 #     print(f"Reproducibility score: {score}")
 #     print(f"Computation time: {latency} ms")

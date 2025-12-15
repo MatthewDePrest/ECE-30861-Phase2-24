@@ -114,7 +114,13 @@ async def compute_metrics_from_url(url: str, artifact_type: ArtifactType) -> Mod
                 'desktop_pc': -1.0,
                 'aws_server': -1.0
             }),
-            size_score_latency=result.get('size_score_latency', 0.0)
+            size_score_latency=result.get('size_score_latency', 0.0),
+            reproducibility=result.get('reproducibility', -1.0),
+            reproducibility_latency=result.get('reproducibility_latency', 0.0),
+            reviewedness=result.get('reviewedness', -1.0),
+            reviewedness_latency=result.get('reviewedness_latency', 0.0),
+            tree_score=0.0,
+            tree_score_latency=0.0
         )
         
         return rating
@@ -189,6 +195,76 @@ async def authenticate():
         status_code=501,
         detail="This system does not support authentication"
     )
+
+@router.post(
+    "/artifact/byRegEx",
+    response_model=List[ArtifactMetadata],
+    summary="Get any artifacts fitting the regular expression (BASELINE)"
+)
+async def get_artifacts_by_regex(
+    artifact_regex: ArtifactRegEx,
+    x_authorization: Optional[str] = Header(None)
+):
+    """
+    Search artifacts by regex - SIMPLE MODE ONLY.
+    """
+    import re
+    
+    # Validate
+    if not artifact_regex or not artifact_regex.regex:
+        raise HTTPException(status_code=400, detail="Invalid regular expression")
+    
+    regex_str = str(artifact_regex.regex).strip()
+    
+    # HARD LIMITS - reject anything complex
+    if len(regex_str) > 50:
+        raise HTTPException(status_code=400, detail="Invalid regular expression")
+    
+    if any(char in regex_str for char in ['*', '+', '{', '(', ')', '[', ']', '|', '?']):
+        raise HTTPException(status_code=400, detail="Invalid regular expression")
+    
+    # Only allow simple string matching - no regex at all
+    try:
+        if USE_LOCAL:
+            artifacts = [
+                {
+                    "id": k,
+                    "name": v["name"],
+                    "type": v["type"]
+                }
+                for k, v in ARTIFACT_STORE.items()
+            ]
+        elif USE_AWS:
+            artifacts, _ = await db_service.list_artifacts(limit=1000)
+        else:
+            raise HTTPException(status_code=500, detail="Internal server error")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal server error")
+    
+    # Simple substring search - NO REGEX
+    matching = []
+    for a in artifacts:
+        try:
+            # Just check if regex_str is IN the name (substring match)
+            if regex_str.lower() in a["name"].lower():
+                artifact_type = a["type"]
+                if isinstance(artifact_type, str):
+                    artifact_type = ArtifactType(artifact_type)
+                
+                matching.append(
+                    ArtifactMetadata(
+                        id=str(a["id"]),
+                        name=a["name"],
+                        type=artifact_type
+                    )
+                )
+        except Exception:
+            continue
+    
+    if not matching:
+        raise HTTPException(status_code=404, detail="No artifact found under this regex")
+    
+    return matching
     
 @router.post(
     "/artifact/{artifact_type}",
@@ -207,9 +283,9 @@ async def create_artifact(
     For models, computes trustworthiness metrics and checks threshold (0.5).
     """
     url_str = str(artifact_data.url)
-    
-    # Extract name from URL
-    artifact_name = extract_name_from_url(url_str)
+
+    # Use provided name if available, otherwise extract from URL
+    artifact_name = artifact_data.name if artifact_data.name else extract_name_from_url(url_str)
     
     # local implementation to check duplicates
     if (USE_LOCAL):
@@ -519,57 +595,6 @@ async def rate_model(
         )
     
     return ModelRating(**rating_data)
-
-@router.post(
-    "/artifact/search/byRegEx",
-    response_model=List[ArtifactMetadata],
-    summary="Get any artifacts fitting the regular expression (BASELINE)"
-)
-async def get_artifacts_by_regex(
-    artifact_regex: ArtifactRegEx,
-    x_authorization: Optional[str] = Header(None)
-):
-    """
-    Search artifacts by regex against their names.
-    """
-
-    # Retrieve artifacts depending on mode
-    if USE_LOCAL:
-        artifacts = [
-            {
-                "id": k,
-                "name": v["name"],
-                "type": v["type"]
-            }
-            for k, v in ARTIFACT_STORE.items()
-        ]
-    elif USE_AWS:
-        artifacts, _ = await db_service.list_artifacts(limit=1000)
-    else:
-        raise HTTPException(status_code=500, detail="Server misconfiguration")
-
-    # Validate regex
-    import re
-    try:
-        pattern = re.compile(artifact_regex.regex)
-    except re.error:
-        raise HTTPException(status_code=400, detail="Invalid regular expression")
-
-    # Filter by regex
-    matching = [
-        ArtifactMetadata(
-            id=str(a["id"]),
-            name=a["name"],
-            type=a["type"]
-        )
-        for a in artifacts
-        if pattern.search(a["name"])
-    ]
-
-    if not matching:
-        raise HTTPException(status_code=404, detail="No artifact found under this regex")
-
-    return matching
 
 @router.get(
     "/artifact/{artifact_type}/{id}/cost",

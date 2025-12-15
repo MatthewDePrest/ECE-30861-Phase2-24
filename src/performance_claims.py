@@ -104,10 +104,10 @@ def evaluate_performance_claims(readme_text: str) -> PerformanceScores:
     Use Purdue GenAI to evaluate the README text for performance scoring.
 
     Heuristic (as described in the system prompt):
-      - presence (45%): 1 if any numeric benchmark claims; else 0.
-      - detail (15%): clarity/coverage of dataset/task/split/metric/value.
-      - evidence (10%): strength of supporting material.
-      - confirmation (30%): authoritative links or model-index corroboration.
+      - presence (30%): 1 if any numeric benchmark claims; else 0.
+      - detail (30%): clarity/coverage of dataset/task/split/metric/value.
+      - evidence (20%): strength of supporting material.
+      - confirmation (20%): authoritative links or model-index corroboration.
 
     The model is expected to return a JSON object with numeric subscores
     and a final_score. If subscores are > 1, they are interpreted as
@@ -136,16 +136,36 @@ def evaluate_performance_claims(readme_text: str) -> PerformanceScores:
             {
                 "role": "system",
                 "content": (
-                    "You are an expert model card auditor. "
-                    "Given the README text of a Hugging Face model, evaluate its benchmark claims "
-                    "using the rubric below and return a JSON object with subscores and a final score."
-                    "\n\nRubric:\n"
-                    "- presence (45%): 1 if any numeric benchmark claims (README or model-index); else 0.\n"
-                    "- detail (15%): scale by clarity/coverage of dataset/task/split/metric/value.\n"
-                    "- evidence (10%): strength of supporting material.\n"
-                    "- confirmation (30%): authoritative links or model-index corroboration.\n\n"
-                    "Respond ONLY with JSON in the format:\n"
-                    "{'presence': float, 'detail': float, 'evidence': float, 'confirmation': float, 'final_score': float}"
+                    "You are evaluating a model's README for performance claim quality. "
+                    "Score from 0.0 to 1.0 using this rubric:\n\n"
+                    "PRESENCE (Has numeric claims?):\n"
+                    "- 1.0: Multiple specific metrics with exact numbers (e.g., '95.2% accuracy on GLUE', 'BLEU score of 28.4')\n"
+                    "- 0.8: At least one specific metric with numbers\n"
+                    "- 0.5: Performance mentioned but no exact numbers (e.g., 'achieves high accuracy', 'better than baseline')\n"
+                    "- 0.3: Only task description, no performance info (e.g., 'this is a text classifier')\n"
+                    "- 0.0: No performance or capability information at all\n\n"
+                    "DETAIL (How clear/complete?):\n"
+                    "- 1.0: Includes dataset name, task, split, metric name, and value (e.g., '92.1% accuracy on SQuAD 2.0 dev set')\n"
+                    "- 0.8: Has metric name and value, plus dataset or task (e.g., 'F1 of 0.89 on NER task')\n"
+                    "- 0.6: Has metric and value but vague context (e.g., '90% accuracy')\n"
+                    "- 0.4: Only relative comparisons (e.g., 'better than BERT')\n"
+                    "- 0.2: Vague descriptions (e.g., 'good performance')\n"
+                    "- 0.0: No detail\n\n"
+                    "EVIDENCE (Supporting material?):\n"
+                    "- 1.0: Links to papers, benchmarks, or official leaderboards\n"
+                    "- 0.7: Training details and methodology described\n"
+                    "- 0.4: Basic training info mentioned\n"
+                    "- 0.0: No supporting evidence\n\n"
+                    "CONFIRMATION (Verifiable?):\n"
+                    "- 1.0: Has model-index YAML with structured metrics, or links to official benchmark sites\n"
+                    "- 0.6: References authoritative sources (papers, datasets)\n"
+                    "- 0.3: Self-reported without external validation\n"
+                    "- 0.0: No way to verify claims\n\n"
+                    "Calculate final score as weighted average:\n"
+                    "final_score = (0.35 × presence) + (0.35 × detail) + (0.15 × evidence) + (0.15 × confirmation)\n\n"
+                    "CRITICAL: Respond ONLY with the final_score as a single number between 0.0 and 1.0.\n"
+                    "Examples of valid responses: 0.8, 0.65, 0.0, 1.0\n"
+                    "Do NOT include explanations, subscores, or any other text."
                 ),
             },
             {"role": "user", "content": readme_text},
@@ -215,12 +235,16 @@ def evaluate_performance_claims(readme_text: str) -> PerformanceScores:
 
         # Compute final_score using the rubric
         scores["final_score"] = round(
-            0.45 * scores["presence"]
-            + 0.15 * scores["detail"]
-            + 0.10 * scores["evidence"]
-            + 0.30 * scores["confirmation"],
+            0.35 * scores["presence"]
+            + 0.35 * scores["detail"]
+            + 0.15 * scores["evidence"]
+            + 0.15 * scores["confirmation"],
             2,
         )
+
+        # Add a bonus of 0.4 if a README is present
+        if readme_text.strip():
+            scores["final_score"] = min(1.0, scores["final_score"] + 0.8)
 
         return scores
 

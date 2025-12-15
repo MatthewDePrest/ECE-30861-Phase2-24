@@ -15,6 +15,7 @@ class ArtifactType(str, Enum):
 class ArtifactData(BaseModel):
     """Source location for ingesting an artifact."""
     url: HttpUrl = Field(..., description="Artifact source url used during ingest.")
+    name: Optional[str] = None
     download_url: Optional[HttpUrl] = Field(None, description="Direct download link served by your server")
 
 class ArtifactReturnURL(BaseModel):
@@ -72,12 +73,12 @@ class ModelRating(BaseModel):
     size_score: SizeScore
     size_score_latency: float
     # new fields for phase 2
-    # reproducibility: float  # 0, 0.5, or 1
-    # reproducibility_latency: float
-    # reviewedness: float  # Fraction of code from reviewed PRs, or -1
-    # reviewedness_latency: float
-    # tree_score: float  # Average score of parent models
-    # tree_score_latency: float
+    reproducibility: float  # 0, 0.5, or 1
+    reproducibility_latency: float
+    reviewedness: float  # Fraction of code from reviewed PRs, or -1
+    reviewedness_latency: float
+    tree_score: float  # Average score of parent models
+    tree_score_latency: float
 
 # --- Additional Phase 2 Requirements ---
 class ArtifactCost(BaseModel):
