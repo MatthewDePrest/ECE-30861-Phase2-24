@@ -242,6 +242,10 @@ def evaluate_performance_claims(readme_text: str) -> PerformanceScores:
             2,
         )
 
+        # Add a bonus of 0.2 if a README is present
+        if readme_text.strip():
+            scores["final_score"] = min(1.0, scores["final_score"] + 0.2)
+
         return scores
 
     except Exception as exc:
