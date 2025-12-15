@@ -173,7 +173,7 @@ Refer to backend documentation in `src/` for build and deployment instructions.
 
 - **State Management**: React Query for server state
 - **HTTP Client**: Axios with automatic authorization header injection
-- **UI Framework**: Material-UI (MUI) with custom dark theme
+- **UI Framework**: Material-UI (MUI)
 - **Build Tool**: Vite
 - **Authentication**: Token-based (localStorage)
 
