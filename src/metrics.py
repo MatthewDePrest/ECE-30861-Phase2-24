@@ -20,7 +20,7 @@ from code_quality import compute as code_quality
 from reproducibility import compute as reproducibility
 from reviewedness import compute as reviewedness
 
-ERROR_VALUE = -1.0
+ERROR_VALUE = 0.0
 
 # ---- Domain: NDJSON output schema for MODEL lines ----
 
