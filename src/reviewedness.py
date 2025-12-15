@@ -6,7 +6,7 @@ import requests
 
 ReviewednessScore: TypeAlias = float   # 0.0–1.0 (or ERROR_VALUE on failure)
 LatencyMs: TypeAlias = int             # milliseconds
-ERROR_VALUE: Final[ReviewednessScore] = -1.0
+ERROR_VALUE: Final[ReviewednessScore] = 0.0
 
 
 async def compute(

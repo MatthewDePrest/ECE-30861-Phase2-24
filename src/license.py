@@ -9,7 +9,7 @@ LicenseScore: TypeAlias = float  # Normalized score in [0.0, 1.0] (or ERROR_VALU
 LatencyMs: TypeAlias = int       # Wall-clock latency in milliseconds
 
 # Global fallback value used when the score cannot be computed
-ERROR_VALUE: LicenseScore = -1.0
+ERROR_VALUE: LicenseScore = 0.0
 
 
 async def compute(

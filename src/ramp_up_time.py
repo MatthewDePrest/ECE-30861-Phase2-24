@@ -8,7 +8,7 @@ import requests
 RampUpScore: TypeAlias = float      # Normalized score in [0.0, 1.0]
 LatencyMs: TypeAlias = int          # Wall-clock latency in milliseconds
 
-ERROR_VALUE: Final[RampUpScore] = -1.0
+ERROR_VALUE: Final[RampUpScore] = 0.0
 
 
 def clamp(value: float, min_value: float = 0.0, max_value: float = 1.0) -> float:
