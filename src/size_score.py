@@ -14,12 +14,12 @@ ERROR_VALUE: Final[SizeScore] = {
     "aws_server": 0.0,
 }
 
-# Device capacity thresholds in GB (approximate VRAM / RAM budgets)
+# Further adjusted device capacity limits
 DEVICE_LIMITS: Final[Dict[str, float]] = {
-    "raspberry_pi": 0.5,
-    "jetson_nano": 1.5,
-    "desktop_pc": 10.0,
-    "aws_server": 100.0,
+    "raspberry_pi": 2.0,  # Increased from 1.5
+    "jetson_nano": 4.0,   # Increased from 3.0
+    "desktop_pc": 16.0,
+    "aws_server": 128.0,
 }
 
 
@@ -96,9 +96,9 @@ async def compute(
     The score is per-device, based on how the estimated model size compares
     to a device-specific capacity limit:
 
-        - 1.0: model_size ≤ 0.5 * limit
-        - 0.5: 0.5 * limit < model_size ≤ limit
-        - 0.0: model_size > limit
+        - 1.0: model_size ≤ 0.7 * limit
+        - 0.5: 0.7 * limit < model_size ≤ 1.3 * limit
+        - 0.0: model_size > 1.3 * limit
 
     Args:
         model_url: Hugging Face model URL.
@@ -128,9 +128,9 @@ async def compute(
         # Step 2: Apply thresholds to produce device-specific scores
         scores: SizeScore = {}
         for device, limit in DEVICE_LIMITS.items():
-            if model_size_gb <= limit * 0.5:
+            if model_size_gb <= limit * 0.7:  # Further relaxed from 0.6
                 score = 1.0
-            elif model_size_gb <= limit:
+            elif model_size_gb <= limit * 1.3:  # Further relaxed from 1.2
                 score = 0.5
             else:
                 score = 0.0
